@@ -19,7 +19,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -30,15 +32,15 @@ public class Dump {
   }
 
   public static Map<String, Multiset<IssueKey>> load(File file) {
-    FileInputStream fis = null;
+    InputStreamReader in = null;
     JSONObject json;
     try {
-      fis = new FileInputStream(file);
-      json = (JSONObject) JSONValue.parse(fis);
+      in = new InputStreamReader(new FileInputStream(file), "UTF-8");
+      json = (JSONObject) JSONValue.parse(in);
     } catch (IOException e) {
       throw Throwables.propagate(e);
     } finally {
-      Closeables.closeQuietly(fis);
+      Closeables.closeQuietly(in);
     }
 
     Map<String, Multiset<IssueKey>> result = Maps.newHashMap();
@@ -65,9 +67,11 @@ public class Dump {
   public static void save(List<IssueKey> dump, File file) {
     PrintStream out = null;
     try {
-      out = new PrintStream(new FileOutputStream(file));
+      out = new PrintStream(new FileOutputStream(file), /* autoFlush: */ true, "UTF-8");
       Dump.save(dump, out);
     } catch (FileNotFoundException e) {
+      throw Throwables.propagate(e);
+    } catch (UnsupportedEncodingException e) {
       throw Throwables.propagate(e);
     } finally {
       Closeables.closeQuietly(out);
@@ -85,13 +89,13 @@ public class Dump {
         if (prevRuleKey != null) {
           endComponent(out);
         }
-        out.println("  '" + issueKey.componentKey + "': {");
-        out.println("    '" + issueKey.ruleKey + "': [");
+        out.println("'" + issueKey.componentKey + "':{");
+        out.println("'" + issueKey.ruleKey + "':[");
       } else if (!issueKey.ruleKey.equals(prevRuleKey)) {
         endRule(out);
-        out.println("    '" + issueKey.ruleKey + "': [");
+        out.println("'" + issueKey.ruleKey + "':[");
       }
-      out.println("      " + issueKey.line + ",");
+      out.println(issueKey.line + ",");
       prevComponentKey = issueKey.componentKey;
       prevRuleKey = issueKey.ruleKey;
     }
@@ -101,11 +105,11 @@ public class Dump {
 
   private static void endComponent(PrintStream out) {
     endRule(out);
-    out.println("  },");
+    out.println("},");
   }
 
   private static void endRule(PrintStream out) {
-    out.println("    ],");
+    out.println("],");
   }
 
 }

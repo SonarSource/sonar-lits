@@ -11,7 +11,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +24,25 @@ public class DumpTest {
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Test
+  public void save() throws Exception {
+    List<IssueKey> issues = Arrays.asList(new IssueKey("componentKey", "ruleKey", 1));
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    Dump.save(issues, new PrintStream(out));
+
+    String expected = new StringBuilder()
+      .append("{\n")
+      .append("'componentKey':{\n")
+      .append("'ruleKey':[\n")
+      .append("1,\n")
+      .append("],\n")
+      .append("},\n")
+      .append("}\n")
+      .toString();
+    assertThat(out.toString()).isEqualTo(expected);
+  }
 
   @Test
   public void load() throws Exception {
