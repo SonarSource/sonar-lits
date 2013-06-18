@@ -1,0 +1,8 @@
+{
+  'sample:[default].Example': {
+    'squid:S00103': [
+      1,
+      3
+    ]
+  }
+}
