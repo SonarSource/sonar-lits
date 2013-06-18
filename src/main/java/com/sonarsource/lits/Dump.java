@@ -83,33 +83,33 @@ public class Dump {
 
     String prevRuleKey = null;
     String prevComponentKey = null;
-    out.println("{");
+    out.print("{\n");
     for (IssueKey issueKey : issues) {
       if (!issueKey.componentKey.equals(prevComponentKey)) {
         if (prevRuleKey != null) {
           endComponent(out);
         }
-        out.println("'" + issueKey.componentKey + "':{");
-        out.println("'" + issueKey.ruleKey + "':[");
+        out.print("'" + issueKey.componentKey + "':{\n");
+        out.print("'" + issueKey.ruleKey + "':[\n");
       } else if (!issueKey.ruleKey.equals(prevRuleKey)) {
         endRule(out);
-        out.println("'" + issueKey.ruleKey + "':[");
+        out.print("'" + issueKey.ruleKey + "':[\n");
       }
-      out.println(issueKey.line + ",");
+      out.print(issueKey.line + ",\n");
       prevComponentKey = issueKey.componentKey;
       prevRuleKey = issueKey.ruleKey;
     }
     endComponent(out);
-    out.println("}");
+    out.print("}\n");
   }
 
   private static void endComponent(PrintStream out) {
     endRule(out);
-    out.println("},");
+    out.print("},\n");
   }
 
   private static void endRule(PrintStream out) {
-    out.println("],");
+    out.print("],\n");
   }
 
 }
