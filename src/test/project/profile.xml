@@ -7,7 +7,7 @@
     <rule>
       <repositoryKey>squid</repositoryKey>
       <key>S00103</key>
-      <priority>CRITICAL</priority>
+      <priority>BLOCKER</priority>
       <parameters>
         <parameter>
           <key>maximumLineLength</key>

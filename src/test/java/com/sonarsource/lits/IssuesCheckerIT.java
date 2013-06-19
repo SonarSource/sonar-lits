@@ -16,6 +16,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.wsclient.services.Resource;
 import org.sonar.wsclient.services.ResourceQuery;
+import org.sonar.wsclient.services.Violation;
+import org.sonar.wsclient.services.ViolationQuery;
 
 import java.io.File;
 
@@ -46,6 +48,10 @@ public class IssuesCheckerIT {
     File projectDir = new File("src/test/project/").getAbsoluteFile();
     File output = new File(temporaryFolder.getRoot(), "new_dump.json");
     SonarRunner build = SonarRunner.create(projectDir)
+      .setProjectKey("project")
+      .setProjectName("project")
+      .setProjectVersion("1")
+      .setSourceDirs("src")
       .setProfile("Test")
       .setProperties("dump.old", new File(projectDir, "dump.json").toString(), "dump.new", output.toString())
       .setProperty("sonar.cpd.skip", "true");
@@ -53,15 +59,18 @@ public class IssuesCheckerIT {
 
     assertThat(output).exists();
 
-    Resource resource = getResource("sample");
-    assertThat(resource.getMeasure("blocker_violations").getValue()).isEqualTo(1);
-    assertThat(resource.getMeasure("critical_violations").getValue()).isEqualTo(1);
-    assertThat(resource.getMeasure("info_violations").getValue()).isEqualTo(1);
-    assertThat(resource.getMeasure("violations").getValue()).isEqualTo(3);
+    assertThat(project().getMeasure("violations").getValue()).isEqualTo(3);
+    assertThat(violation("BLOCKER").getLine()).isEqualTo(3);
+    assertThat(violation("CRITICAL").getLine()).isEqualTo(2);
+    assertThat(violation("INFO").getLine()).isEqualTo(1);
   }
 
-  private Resource getResource(String key) {
-    return orchestrator.getServer().getWsClient().find(ResourceQuery.createForMetrics(key, "violations", "blocker_violations", "critical_violations", "info_violations"));
+  private Violation violation(String severity) {
+    return orchestrator.getServer().getWsClient().find(ViolationQuery.createForResource("project").setDepth(-1).setLimit(1).setSeverities(severity));
+  }
+
+  private Resource project() {
+    return orchestrator.getServer().getWsClient().find(ResourceQuery.createForMetrics("project", "violations"));
   }
 
 }

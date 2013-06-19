@@ -53,6 +53,7 @@ public class IssuesChecker implements IssueHandler, Decorator {
         LOG.warn("File not found: " + oldDumpFile);
         previous = ImmutableMap.of();
       } else {
+        LOG.info("Loading " + oldDumpFile);
         previous = Dump.load(oldDumpFile);
       }
     }
@@ -79,18 +80,18 @@ public class IssuesChecker implements IssueHandler, Decorator {
     Multiset<IssueKey> componentIssues = getByComponentKey(issueKey.componentKey);
     if (componentIssues.contains(issueKey)) {
       componentIssues.remove(issueKey);
-      // old issue => decrease priority
+      // old issue => decrease severity
       context.setSeverity(Severity.INFO);
     } else {
-      // new issue => increase priority
-      context.setSeverity(Severity.BLOCKER);
+      // new issue => increase severity
+      context.setSeverity(Severity.CRITICAL);
     }
   }
 
   public void decorate(Resource resource, DecoratorContext context) {
     if (Scopes.isHigherThanOrEquals(resource, Scopes.FILE)) {
       for (IssueKey issueKey : getByComponentKey(resource.getEffectiveKey())) {
-        // missing issue => create
+        // missing issue => create, severity will be taken from profile
         Rule rule = ruleFinder.findByKey(RuleKey.parse(issueKey.ruleKey));
         context.saveViolation(Violation.create(rule, resource)
           .setLineId(issueKey.line)

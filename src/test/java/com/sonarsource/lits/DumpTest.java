@@ -51,7 +51,7 @@ public class DumpTest {
     System.out.println(dump);
 
     assertThat(dump.size()).isEqualTo(1);
-    String componentKey = "sample:[default].Example";
+    String componentKey = "project:[default].Example";
     String ruleKey = "squid:S00103";
     Multiset<IssueKey> component = dump.get(componentKey);
     assertThat(component.contains(new IssueKey(componentKey, ruleKey, 1))).isTrue();
