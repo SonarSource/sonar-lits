@@ -47,6 +47,8 @@ public class IssuesChecker implements IssueHandler, Decorator {
    */
   private final List<IssueKey> dump = Lists.newArrayList();
 
+  private boolean different = false;
+
   public Multiset<IssueKey> getByComponentKey(String componentKey) {
     if (previous == null) {
       if (!oldDumpFile.isFile()) {
@@ -85,6 +87,7 @@ public class IssuesChecker implements IssueHandler, Decorator {
     } else {
       // new issue => increase severity
       context.setSeverity(Severity.CRITICAL);
+      different = true;
     }
   }
 
@@ -96,11 +99,16 @@ public class IssuesChecker implements IssueHandler, Decorator {
         context.saveViolation(Violation.create(rule, resource)
           .setLineId(issueKey.line)
           .setMessage("Missing"));
+        different = true;
       }
     }
     if (Scopes.isProject(resource)) {
-      LOG.info("Saving " + newDumpFile);
-      Dump.save(dump, newDumpFile);
+      if (different) {
+        LOG.info("Saving " + newDumpFile);
+        Dump.save(dump, newDumpFile);
+      } else {
+        LOG.info("No differences in issues");
+      }
     }
   }
 

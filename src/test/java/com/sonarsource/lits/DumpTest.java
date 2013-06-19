@@ -46,7 +46,7 @@ public class DumpTest {
 
   @Test
   public void load() throws Exception {
-    File file = new File("src/test/project/dump.json");
+    File file = new File("src/test/project/differences.json");
     Map<String, Multiset<IssueKey>> dump = Dump.load(file);
     System.out.println(dump);
 
@@ -60,7 +60,7 @@ public class DumpTest {
 
   @Test
   public void save_load() throws Exception {
-    File file = temporaryFolder.newFile("dump.json");
+    File file = new File(temporaryFolder.newFolder(), "dump.json");
 
     List<IssueKey> issues = Lists.newArrayList();
     issues.add(new IssueKey("componentKey1", "ruleKey", 1));

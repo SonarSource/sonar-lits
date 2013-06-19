@@ -10,6 +10,7 @@ import com.sonar.orchestrator.build.SonarRunner;
 import com.sonar.orchestrator.locator.FileLocation;
 import com.sonar.orchestrator.locator.Location;
 import org.apache.commons.lang.StringUtils;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -20,6 +21,7 @@ import org.sonar.wsclient.services.Violation;
 import org.sonar.wsclient.services.ViolationQuery;
 
 import java.io.File;
+import java.util.List;
 
 import static org.fest.assertions.Assertions.assertThat;
 
@@ -34,6 +36,11 @@ public class IssuesCheckerIT {
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile.xml"))
     .build();
 
+  @Before
+  public void resetData() throws Exception {
+    orchestrator.getDatabase().truncateInspectionTables();
+  }
+
   private static Location getPluginLocation() {
     String propertyName = "litsVersion";
     String version = System.getProperty(propertyName);
@@ -43,18 +50,20 @@ public class IssuesCheckerIT {
     return FileLocation.of("target/sonar-lits-plugin-" + version + ".jar");
   }
 
+  private File projectDir = new File("src/test/project/").getAbsoluteFile();
+
   @Test
-  public void test() throws Exception {
-    File projectDir = new File("src/test/project/").getAbsoluteFile();
-    File output = new File(temporaryFolder.getRoot(), "new_dump.json");
+  public void differences() throws Exception {
+    File output = new File(temporaryFolder.newFolder(), "dump.json");
     SonarRunner build = SonarRunner.create(projectDir)
       .setProjectKey("project")
       .setProjectName("project")
       .setProjectVersion("1")
       .setSourceDirs("src")
       .setProfile("Test")
-      .setProperties("dump.old", new File(projectDir, "dump.json").toString(), "dump.new", output.toString())
-      .setProperty("sonar.cpd.skip", "true");
+      .setProperties("dump.old", new File(projectDir, "differences.json").toString(), "dump.new", output.toString())
+      .setProperty("sonar.cpd.skip", "true")
+      .setProperty("sonar.dynamicAnalysis", "false");
     orchestrator.executeBuild(build);
 
     assertThat(output).exists();
@@ -65,8 +74,34 @@ public class IssuesCheckerIT {
     assertThat(violation("INFO").getLine()).isEqualTo(1);
   }
 
+  @Test
+  public void no_differences() throws Exception {
+    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    SonarRunner build = SonarRunner.create(projectDir)
+      .setProjectKey("project")
+      .setProjectName("project")
+      .setProjectVersion("1")
+      .setSourceDirs("src")
+      .setProfile("Test")
+      .setProperties("dump.old", new File(projectDir, "no_differences.json").toString(), "dump.new", output.toString())
+      .setProperty("sonar.cpd.skip", "true")
+      .setProperty("sonar.dynamicAnalysis", "false");
+    orchestrator.executeBuild(build);
+
+    assertThat(output).doesNotExist();
+
+    assertThat(project().getMeasure("violations").getValue()).isEqualTo(2);
+    assertThat(violations("INFO").size()).isEqualTo(2);
+  }
+
   private Violation violation(String severity) {
-    return orchestrator.getServer().getWsClient().find(ViolationQuery.createForResource("project").setDepth(-1).setLimit(1).setSeverities(severity));
+    List<Violation> violations = violations(severity);
+    assertThat(violations.size()).isEqualTo(1);
+    return violations.get(0);
+  }
+
+  private List<Violation> violations(String severity) {
+    return orchestrator.getServer().getWsClient().findAll(ViolationQuery.createForResource("project").setDepth(-1).setSeverities(severity));
   }
 
   private Resource project() {
