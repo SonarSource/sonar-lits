@@ -49,7 +49,7 @@ public class IssuesChecker implements IssueHandler, Decorator {
 
   private boolean different = false;
 
-  public Multiset<IssueKey> getByComponentKey(String componentKey) {
+  private Multiset<IssueKey> getByComponentKey(String componentKey) {
     if (previous == null) {
       if (!oldDumpFile.isFile()) {
         LOG.warn("File not found: " + oldDumpFile);
