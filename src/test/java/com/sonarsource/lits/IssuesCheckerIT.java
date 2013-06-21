@@ -6,6 +6,7 @@
 package com.sonarsource.lits;
 
 import com.sonar.orchestrator.Orchestrator;
+import com.sonar.orchestrator.build.BuildResult;
 import com.sonar.orchestrator.build.SonarRunner;
 import com.sonar.orchestrator.locator.FileLocation;
 import com.sonar.orchestrator.locator.Location;
@@ -34,6 +35,7 @@ public class IssuesCheckerIT {
   public static Orchestrator orchestrator = Orchestrator.builderEnv()
     .addPlugin(getPluginLocation())
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile.xml"))
+    .restoreProfileAtStartup(FileLocation.of("src/test/project/profile_incorrect.xml"))
     .build();
 
   @Before
@@ -60,7 +62,7 @@ public class IssuesCheckerIT {
       .setProjectName("project")
       .setProjectVersion("1")
       .setSourceDirs("src")
-      .setProfile("Test")
+      .setProfile("profile")
       .setProperties("dump.old", new File(projectDir, "differences.json").toString(), "dump.new", output.toString())
       .setProperty("sonar.cpd.skip", "true")
       .setProperty("sonar.dynamicAnalysis", "false");
@@ -82,7 +84,7 @@ public class IssuesCheckerIT {
       .setProjectName("project")
       .setProjectVersion("1")
       .setSourceDirs("src")
-      .setProfile("Test")
+      .setProfile("profile")
       .setProperties("dump.old", new File(projectDir, "no_differences.json").toString(), "dump.new", output.toString())
       .setProperty("sonar.cpd.skip", "true")
       .setProperty("sonar.dynamicAnalysis", "false");
@@ -92,6 +94,24 @@ public class IssuesCheckerIT {
 
     assertThat(project().getMeasure("violations").getValue()).isEqualTo(2);
     assertThat(violations("INFO").size()).isEqualTo(2);
+  }
+
+  @Test
+  public void profile_incorrect() throws Exception {
+    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    SonarRunner build = SonarRunner.create(projectDir)
+      .setProjectKey("project")
+      .setProjectName("project")
+      .setProjectVersion("1")
+      .setSourceDirs("src")
+      .setProfile("profile_incorrect")
+      .setProperties("dump.old", new File(projectDir, "differences.json").toString(), "dump.new", output.toString())
+      .setProperty("sonar.cpd.skip", "true")
+      .setProperty("sonar.dynamicAnalysis", "false");
+    BuildResult buildResult = orchestrator.executeBuildQuietly(build);
+
+    assertThat(buildResult.getStatus()).isNotEqualTo(0);
+    assertThat(buildResult.getLogs()).contains("Rule 'squid:S00103' must be declared with severity BLOCKER in profile 'profile_incorrect'");
   }
 
   private Violation violation(String severity) {

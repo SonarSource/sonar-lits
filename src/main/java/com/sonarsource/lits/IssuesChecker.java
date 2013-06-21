@@ -18,13 +18,14 @@ import org.sonar.api.batch.DependsUpon;
 import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.issue.IssueHandler;
+import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Project;
 import org.sonar.api.resources.Resource;
 import org.sonar.api.resources.Scopes;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.Severity;
-import org.sonar.api.rules.Rule;
-import org.sonar.api.rules.RuleFinder;
+import org.sonar.api.rules.ActiveRule;
+import org.sonar.api.rules.RulePriority;
 import org.sonar.api.rules.Violation;
 import org.sonar.api.utils.SonarException;
 
@@ -36,6 +37,9 @@ import java.util.Map;
 public class IssuesChecker implements IssueHandler, Decorator {
 
   private static final Logger LOG = LoggerFactory.getLogger(IssuesChecker.class);
+
+  private final RulesProfile profile;
+  private final File oldDumpFile, newDumpFile;
 
   /**
    * Previous findings indexed by {@link IssueKey#componentKey}.
@@ -66,13 +70,15 @@ public class IssuesChecker implements IssueHandler, Decorator {
     return issueKeys;
   }
 
-  private final File oldDumpFile, newDumpFile;
-  private final RuleFinder ruleFinder;
-
-  public IssuesChecker(Settings settings, RuleFinder ruleFinder) {
+  public IssuesChecker(Settings settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
-    this.ruleFinder = ruleFinder;
+    this.profile = profile;
+    for (ActiveRule activeRule : profile.getActiveRules()) {
+      if (activeRule.getSeverity() != RulePriority.BLOCKER) {
+        throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity BLOCKER in profile '" + profile.getName() + "'");
+      }
+    }
   }
 
   public void onIssue(Context context) {
@@ -95,8 +101,13 @@ public class IssuesChecker implements IssueHandler, Decorator {
     if (Scopes.isHigherThanOrEquals(resource, Scopes.FILE)) {
       for (IssueKey issueKey : getByComponentKey(resource.getEffectiveKey())) {
         // missing issue => create, severity will be taken from profile
-        Rule rule = ruleFinder.findByKey(RuleKey.parse(issueKey.ruleKey));
-        context.saveViolation(Violation.create(rule, resource)
+        RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
+        ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
+        if (activeRule == null) {
+          // rule not active => skip it
+          continue;
+        }
+        context.saveViolation(Violation.create(activeRule, resource)
           .setLineId(issueKey.line)
           .setMessage("Missing"));
         different = true;

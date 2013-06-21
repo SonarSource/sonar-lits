@@ -15,11 +15,13 @@ import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.issue.IssueHandler;
 import org.sonar.api.issue.internal.DefaultIssue;
+import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Resource;
 import org.sonar.api.resources.Scopes;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.Severity;
-import org.sonar.api.rules.RuleFinder;
+import org.sonar.api.rules.ActiveRule;
+import org.sonar.api.rules.RulePriority;
 import org.sonar.api.rules.Violation;
 import org.sonar.api.utils.SonarException;
 
@@ -27,6 +29,7 @@ import java.io.File;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,7 +44,7 @@ public class IssuesCheckerTest {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private RuleFinder ruleFinder = mock(RuleFinder.class);
+  private RulesProfile profile = mock(RulesProfile.class);
   private IssueHandler.Context issueHandlerContext = mock(IssueHandler.Context.class);
   private Resource resource = mock(Resource.class);
   private DecoratorContext decoratorContext = mock(DecoratorContext.class);
@@ -54,7 +57,8 @@ public class IssuesCheckerTest {
     Settings settings = new Settings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/project/differences.json").getAbsolutePath());
     settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, output.getAbsolutePath());
-    checker = new IssuesChecker(settings, ruleFinder);
+    checker = new IssuesChecker(settings, profile);
+    when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(null, null, RulePriority.BLOCKER));
   }
 
   @Test
@@ -62,7 +66,7 @@ public class IssuesCheckerTest {
     Settings settings = new Settings();
     thrown.expect(SonarException.class);
     thrown.expectMessage("Missing property 'dump.old'");
-    new IssuesChecker(settings, ruleFinder);
+    new IssuesChecker(settings, profile);
   }
 
   @Test
@@ -71,7 +75,7 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
     thrown.expect(SonarException.class);
     thrown.expectMessage("Path must be absolute - check property 'dump.old'");
-    new IssuesChecker(settings, ruleFinder);
+    new IssuesChecker(settings, profile);
   }
 
   @Test
