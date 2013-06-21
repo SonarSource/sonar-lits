@@ -27,6 +27,7 @@ public class IssueKeyTest {
     assertThat(issueKey.equals(new IssueKey("componentKey", "ruleKey", 1))).isFalse();
     assertThat(issueKey.equals(new IssueKey("componentKey", "ruleKey2", null))).isFalse();
     assertThat(issueKey.equals(new IssueKey("componentKey2", "ruleKey", null))).isFalse();
+    assertThat(issueKey.equals(new Object())).isFalse();
   }
 
   @Test
