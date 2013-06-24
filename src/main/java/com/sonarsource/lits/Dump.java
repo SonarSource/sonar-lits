@@ -16,12 +16,10 @@ import net.minidev.json.JSONValue;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -69,9 +67,7 @@ public class Dump {
     try {
       out = new PrintStream(new FileOutputStream(file), /* autoFlush: */ true, "UTF-8");
       Dump.save(dump, out);
-    } catch (FileNotFoundException e) {
-      throw Throwables.propagate(e);
-    } catch (UnsupportedEncodingException e) {
+    } catch (IOException e) {
       throw Throwables.propagate(e);
     } finally {
       Closeables.closeQuietly(out);

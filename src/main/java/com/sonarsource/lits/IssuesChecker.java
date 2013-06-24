@@ -76,7 +76,8 @@ public class IssuesChecker implements IssueHandler, Decorator {
     this.profile = profile;
     for (ActiveRule activeRule : profile.getActiveRules()) {
       if (activeRule.getSeverity() != RulePriority.BLOCKER) {
-        throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity BLOCKER in profile '" + profile.getName() + "'");
+        throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() +
+          "' must be declared with severity BLOCKER in profile '" + profile.getName() + "'");
       }
     }
   }
