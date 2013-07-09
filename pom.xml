@@ -37,7 +37,7 @@
   </issueManagement>
 
   <properties>
-    <sonar.version>3.6-SNAPSHOT</sonar.version>
+    <sonar.version>3.6</sonar.version>
     <sonar.pluginName>LITS</sonar.pluginName>
     <sonar.pluginClass>com.sonarsource.lits.LITSPlugin</sonar.pluginClass>
 
@@ -49,6 +49,13 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.sonarsource.orchestrator</groupId>
+      <artifactId>sonar-orchestrator</artifactId>
+      <version>2.8</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
       <groupId>org.codehaus.sonar</groupId>
       <artifactId>sonar-plugin-api</artifactId>
       <version>${sonar.version}</version>
@@ -59,13 +66,6 @@
       <groupId>net.minidev</groupId>
       <artifactId>json-smart</artifactId>
       <version>1.1.1</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.sonarsource.orchestrator</groupId>
-      <artifactId>sonar-orchestrator</artifactId>
-      <version>2.8</version>
-      <scope>test</scope>
     </dependency>
 
     <dependency>
