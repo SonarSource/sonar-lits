@@ -98,7 +98,7 @@
             <artifactId>maven-failsafe-plugin</artifactId>
             <version>2.15</version>
             <configuration>
-              <argLine>${surefire.argLine} -DlitsVersion=${project.version}</argLine>
+              <argLine>${surefire.argLine}</argLine>
             </configuration>
             <executions>
               <execution>
