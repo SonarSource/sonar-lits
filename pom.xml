@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.sonarsource.parent</groupId>
     <artifactId>parent</artifactId>
-    <version>23</version>
+    <version>24</version>
   </parent>
 
   <groupId>com.sonarsource.lits</groupId>
