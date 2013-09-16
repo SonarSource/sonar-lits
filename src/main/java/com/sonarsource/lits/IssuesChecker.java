@@ -102,16 +102,17 @@ public class IssuesChecker implements IssueHandler, Decorator {
     if (Scopes.isHigherThanOrEquals(resource, Scopes.FILE)) {
       for (IssueKey issueKey : getByComponentKey(resource.getEffectiveKey())) {
         // missing issue => create, severity will be taken from profile
+        different = true;
         RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
         ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
         if (activeRule == null) {
           // rule not active => skip it
+          LOG.warn("Rule '{}' is not active", issueKey.ruleKey);
           continue;
         }
         context.saveViolation(Violation.create(activeRule, resource)
           .setLineId(issueKey.line)
           .setMessage("Missing"));
-        different = true;
       }
     }
     if (Scopes.isProject(resource)) {

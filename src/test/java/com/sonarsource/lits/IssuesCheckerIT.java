@@ -91,6 +91,28 @@ public class IssuesCheckerIT {
   }
 
   @Test
+  public void rule_removed() throws Exception {
+    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    SonarRunner build = SonarRunner.create(projectDir)
+      .setProjectKey("project")
+      .setProjectName("project")
+      .setProjectVersion("1")
+      .setSourceDirs("src")
+      .setProfile("profile")
+      .setProperties("dump.old", new File(projectDir, "rule_removed.json").toString(), "dump.new", output.toString())
+      .setProperty("sonar.cpd.skip", "true")
+      .setProperty("sonar.dynamicAnalysis", "false");
+    BuildResult buildResult = orchestrator.executeBuild(build);
+
+    assertThat(buildResult.getLogs()).contains("Rule 'squid:NOT_IN_PROFILE' is not active");
+
+    assertThat(output).exists();
+
+    assertThat(project().getMeasure("violations").getValue()).isEqualTo(2);
+    assertThat(violations("INFO").size()).isEqualTo(2);
+  }
+
+  @Test
   public void profile_incorrect() throws Exception {
     File output = new File(temporaryFolder.newFolder(), "dump.json");
     SonarRunner build = SonarRunner.create(projectDir)
