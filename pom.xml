@@ -44,6 +44,17 @@
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- Workaround for http://jira.sonarsource.com/browse/ORCH-187 -->
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>11.0.2</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.codehaus.sonar</groupId>
