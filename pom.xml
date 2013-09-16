@@ -42,9 +42,6 @@
     <sonar.pluginClass>com.sonarsource.lits.LITSPlugin</sonar.pluginClass>
 
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
-
-    <!-- Awaiting http://jira.sonarsource.com/browse/PARENT-28 -->
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
 
   <dependencies>
