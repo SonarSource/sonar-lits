@@ -6,7 +6,7 @@
     <rule>
       <repositoryKey>squid</repositoryKey>
       <key>S00103</key>
-      <priority>BLOCKER</priority>
+      <priority>INFO</priority>
       <parameters>
         <parameter>
           <key>maximumLineLength</key>

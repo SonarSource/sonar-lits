@@ -127,7 +127,7 @@ public class IssuesCheckerIT {
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
     assertThat(buildResult.getStatus()).isNotEqualTo(0);
-    assertThat(buildResult.getLogs()).contains("Rule 'squid:S00103' must be declared with severity BLOCKER in profile 'profile_incorrect'");
+    assertThat(buildResult.getLogs()).contains("Rule 'squid:S00103' must be declared with severity INFO in profile 'profile_incorrect'");
   }
 
   private Violation violation(String severity) {

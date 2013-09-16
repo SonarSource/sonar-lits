@@ -5,6 +5,7 @@
  */
 package com.sonarsource.lits;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Lists;
@@ -16,7 +17,9 @@ import org.sonar.api.batch.Decorator;
 import org.sonar.api.batch.DecoratorBarriers;
 import org.sonar.api.batch.DecoratorContext;
 import org.sonar.api.batch.DependsUpon;
+import org.sonar.api.component.ResourcePerspectives;
 import org.sonar.api.config.Settings;
+import org.sonar.api.issue.Issuable;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.issue.IssueHandler;
 import org.sonar.api.profiles.RulesProfile;
@@ -27,7 +30,6 @@ import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
 import org.sonar.api.rules.RulePriority;
-import org.sonar.api.rules.Violation;
 import org.sonar.api.utils.SonarException;
 
 import java.io.File;
@@ -41,6 +43,7 @@ public class IssuesChecker implements IssueHandler, Decorator {
   private static final Logger LOG = LoggerFactory.getLogger(IssuesChecker.class);
 
   private final RulesProfile profile;
+  private final ResourcePerspectives resourcePerspectives;
   private final File oldDumpFile, newDumpFile;
 
   /**
@@ -74,14 +77,15 @@ public class IssuesChecker implements IssueHandler, Decorator {
     return issueKeys;
   }
 
-  public IssuesChecker(Settings settings, RulesProfile profile) {
+  public IssuesChecker(Settings settings, RulesProfile profile, ResourcePerspectives resourcePerspectives) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
     this.profile = profile;
+    this.resourcePerspectives = resourcePerspectives;
     for (ActiveRule activeRule : profile.getActiveRules()) {
-      if (activeRule.getSeverity() != RulePriority.BLOCKER) {
+      if (activeRule.getSeverity() != RulePriority.INFO) {
         throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() +
-          "' must be declared with severity BLOCKER in profile '" + profile.getName() + "'");
+          "' must be declared with severity INFO in profile '" + profile.getName() + "'");
       }
     }
   }
@@ -92,9 +96,9 @@ public class IssuesChecker implements IssueHandler, Decorator {
     dump.add(issueKey);
     Multiset<IssueKey> componentIssues = getByComponentKey(issueKey.componentKey);
     if (componentIssues.contains(issueKey)) {
+      // old issue => supposed that it was created with severity from profile
       componentIssues.remove(issueKey);
-      // old issue => decrease severity
-      context.setSeverity(Severity.INFO);
+      Preconditions.checkState(Severity.INFO.equals(issue.severity()));
     } else {
       // new issue => increase severity
       context.setSeverity(Severity.CRITICAL);
@@ -104,8 +108,9 @@ public class IssuesChecker implements IssueHandler, Decorator {
 
   public void decorate(Resource resource, DecoratorContext context) {
     if (Scopes.isHigherThanOrEquals(resource, Scopes.FILE)) {
+      Issuable issuable = resourcePerspectives.as(Issuable.class, resource);
       for (IssueKey issueKey : getByComponentKey(resource.getEffectiveKey())) {
-        // missing issue => create, severity will be taken from profile
+        // missing issue => create
         different = true;
         RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
         ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
@@ -114,9 +119,12 @@ public class IssuesChecker implements IssueHandler, Decorator {
           inactiveRules.add(issueKey.ruleKey);
           continue;
         }
-        context.saveViolation(Violation.create(activeRule, resource)
-          .setLineId(issueKey.line)
-          .setMessage("Missing"));
+        issuable.addIssue(issuable.newIssueBuilder()
+          .ruleKey(ruleKey)
+          .severity(Severity.BLOCKER)
+          .line(issueKey.line)
+          .message("Missing")
+          .build());
       }
     }
     if (Scopes.isProject(resource)) {
