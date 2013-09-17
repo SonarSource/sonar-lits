@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.Decorator;
@@ -32,6 +33,7 @@ import org.sonar.api.utils.SonarException;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @DependsUpon(DecoratorBarriers.ISSUES_TRACKED)
 public class IssuesChecker implements IssueHandler, Decorator {
@@ -50,6 +52,8 @@ public class IssuesChecker implements IssueHandler, Decorator {
    * New findings.
    */
   private final List<IssueKey> dump = Lists.newArrayList();
+
+  private final Set<String> inactiveRules = Sets.newHashSet();
 
   private boolean different = false;
 
@@ -107,7 +111,7 @@ public class IssuesChecker implements IssueHandler, Decorator {
         ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
         if (activeRule == null) {
           // rule not active => skip it
-          LOG.warn("Rule '{}' is not active", issueKey.ruleKey);
+          inactiveRules.add(issueKey.ruleKey);
           continue;
         }
         context.saveViolation(Violation.create(activeRule, resource)
@@ -116,6 +120,9 @@ public class IssuesChecker implements IssueHandler, Decorator {
       }
     }
     if (Scopes.isProject(resource)) {
+      for (String inactiveRule : inactiveRules) {
+        LOG.warn("Rule '{}' is not active", inactiveRule);
+      }
       if (different) {
         LOG.info("Saving " + newDumpFile);
         Dump.save(dump, newDumpFile);
