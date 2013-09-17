@@ -5,6 +5,7 @@
  */
 package com.sonarsource.lits;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Maps;
@@ -33,7 +34,7 @@ public class Dump {
     InputStreamReader in = null;
     JSONObject json;
     try {
-      in = new InputStreamReader(new FileInputStream(file), "UTF-8");
+      in = new InputStreamReader(new FileInputStream(file), Charsets.UTF_8);
       json = (JSONObject) JSONValue.parse(in);
     } catch (IOException e) {
       throw Throwables.propagate(e);
@@ -65,7 +66,7 @@ public class Dump {
   public static void save(List<IssueKey> dump, File file) {
     PrintStream out = null;
     try {
-      out = new PrintStream(new FileOutputStream(file), /* autoFlush: */ true, "UTF-8");
+      out = new PrintStream(new FileOutputStream(file), /* autoFlush: */ true, Charsets.UTF_8.name());
       Dump.save(dump, out);
     } catch (IOException e) {
       throw Throwables.propagate(e);
@@ -86,10 +87,10 @@ public class Dump {
           endComponent(out);
         }
         out.print("'" + issueKey.componentKey + "':{\n");
-        out.print("'" + issueKey.ruleKey + "':[\n");
+        startRule(out, issueKey.ruleKey);
       } else if (!issueKey.ruleKey.equals(prevRuleKey)) {
         endRule(out);
-        out.print("'" + issueKey.ruleKey + "':[\n");
+        startRule(out, issueKey.ruleKey);
       }
       out.print(issueKey.line + ",\n");
       prevComponentKey = issueKey.componentKey;
@@ -97,6 +98,10 @@ public class Dump {
     }
     endComponent(out);
     out.print("}\n");
+  }
+
+  private static void startRule(PrintStream out, String ruleKey) {
+    out.print("'" + ruleKey + "':[\n");
   }
 
   private static void endComponent(PrintStream out) {
