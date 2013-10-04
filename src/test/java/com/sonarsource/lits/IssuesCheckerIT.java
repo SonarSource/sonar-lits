@@ -113,6 +113,25 @@ public class IssuesCheckerIT {
   }
 
   @Test
+  public void missing_issue_on_file() throws Exception {
+    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    SonarRunner build = SonarRunner.create(projectDir)
+        .setProjectKey("project")
+        .setProjectName("project")
+        .setProjectVersion("1")
+        .setSourceDirs("src")
+        .setProfile("profile")
+        .setProperties("dump.old", new File(projectDir, "missing_issue_on_file.json").toString(), "dump.new", output.toString())
+        .setProperty("sonar.cpd.skip", "true")
+        .setProperty("sonar.dynamicAnalysis", "false");
+    orchestrator.executeBuild(build);
+
+    assertThat(output).exists();
+
+    assertThat(violation("BLOCKER").getLine()).isNull();
+  }
+
+  @Test
   public void profile_incorrect() throws Exception {
     File output = new File(temporaryFolder.newFolder(), "dump.json");
     SonarRunner build = SonarRunner.create(projectDir)

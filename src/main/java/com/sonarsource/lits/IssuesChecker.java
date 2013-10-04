@@ -122,7 +122,7 @@ public class IssuesChecker implements IssueHandler, Decorator {
         issuable.addIssue(issuable.newIssueBuilder()
           .ruleKey(ruleKey)
           .severity(Severity.BLOCKER)
-          .line(issueKey.line)
+          .line(issueKey.line == 0 ? null : issueKey.line)
           .message("Missing")
           .build());
       }
