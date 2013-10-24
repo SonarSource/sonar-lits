@@ -63,6 +63,19 @@ public class IssuesChecker implements IssueHandler, Decorator {
 
   private boolean different = false;
 
+  public IssuesChecker(Settings settings, RulesProfile profile, ResourcePerspectives resourcePerspectives) {
+    oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
+    newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
+    this.profile = profile;
+    this.resourcePerspectives = resourcePerspectives;
+    for (ActiveRule activeRule : profile.getActiveRules()) {
+      if (activeRule.getSeverity() != RulePriority.INFO) {
+        throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() +
+          "' must be declared with severity INFO in profile '" + profile.getName() + "'");
+      }
+    }
+  }
+
   private Multiset<IssueKey> getByComponentKey(String componentKey) {
     if (previous == null) {
       if (!oldDumpFile.isFile()) {
@@ -78,19 +91,6 @@ public class IssuesChecker implements IssueHandler, Decorator {
       issueKeys = ImmutableMultiset.of();
     }
     return issueKeys;
-  }
-
-  public IssuesChecker(Settings settings, RulesProfile profile, ResourcePerspectives resourcePerspectives) {
-    oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
-    newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
-    this.profile = profile;
-    this.resourcePerspectives = resourcePerspectives;
-    for (ActiveRule activeRule : profile.getActiveRules()) {
-      if (activeRule.getSeverity() != RulePriority.INFO) {
-        throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() +
-          "' must be declared with severity INFO in profile '" + profile.getName() + "'");
-      }
-    }
   }
 
   public void onIssue(Context context) {
