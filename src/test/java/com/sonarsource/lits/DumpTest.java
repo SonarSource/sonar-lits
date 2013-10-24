@@ -14,6 +14,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.lang.reflect.Constructor;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +74,14 @@ public class DumpTest {
     assertThat(dump.size()).isEqualTo(2);
     assertThat(dump.get("componentKey1").size()).isEqualTo(1);
     assertThat(dump.get("componentKey2").size()).isEqualTo(2);
+  }
+
+  @Test
+  public void private_constructor() throws Exception {
+    Constructor constructor = Dump.class.getDeclaredConstructor();
+    assertThat(constructor.isAccessible()).isFalse();
+    constructor.setAccessible(true);
+    constructor.newInstance();
   }
 
 }

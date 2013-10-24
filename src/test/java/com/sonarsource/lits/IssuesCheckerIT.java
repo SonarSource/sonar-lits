@@ -102,14 +102,14 @@ public class IssuesCheckerIT {
       .setProperties("dump.old", new File(projectDir, "rule_removed.json").toString(), "dump.new", output.toString())
       .setProperty("sonar.cpd.skip", "true")
       .setProperty("sonar.dynamicAnalysis", "false");
-    BuildResult buildResult = orchestrator.executeBuild(build);
+    BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
-    assertThat(buildResult.getLogs()).contains("Rule 'squid:NOT_IN_PROFILE' is not active");
+    assertThat(buildResult.getStatus()).isNotEqualTo(0);
+    assertThat(buildResult.getLogs()).contains("Inactive rules: squid:NOT_IN_PROFILE");
 
     assertThat(output).exists();
 
-    assertThat(project().getMeasure("violations").getValue()).isEqualTo(2);
-    assertThat(violations("INFO").size()).isEqualTo(2);
+    assertThat(project()).isNull();
   }
 
   @Test

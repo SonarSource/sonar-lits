@@ -5,6 +5,7 @@
  */
 package com.sonarsource.lits;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
@@ -33,6 +34,8 @@ import org.sonar.api.rules.RulePriority;
 import org.sonar.api.utils.SonarException;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -128,14 +131,14 @@ public class IssuesChecker implements IssueHandler, Decorator {
       }
     }
     if (Scopes.isProject(resource)) {
-      for (String inactiveRule : inactiveRules) {
-        LOG.warn("Rule '{}' is not active", inactiveRule);
-      }
       if (different) {
         LOG.info("Saving " + newDumpFile);
         Dump.save(dump, newDumpFile);
       } else {
         LOG.info("No differences in issues");
+      }
+      if (!inactiveRules.isEmpty()) {
+        throw new SonarException("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
       }
     }
   }

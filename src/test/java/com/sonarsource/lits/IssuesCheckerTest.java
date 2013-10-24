@@ -6,7 +6,6 @@
 package com.sonarsource.lits;
 
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
@@ -23,12 +22,15 @@ import org.sonar.api.resources.Scopes;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
+import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.RulePriority;
 import org.sonar.api.utils.SonarException;
 
 import java.io.File;
+import java.util.Arrays;
 
 import static org.fest.assertions.Assertions.assertThat;
+import static org.fest.assertions.Fail.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -40,16 +42,15 @@ import static org.mockito.Mockito.when;
 
 public class IssuesCheckerTest {
 
-  @Rule
+  @org.junit.Rule
   public ExpectedException thrown = ExpectedException.none();
 
-  @Rule
+  @org.junit.Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private RulesProfile profile = mock(RulesProfile.class);
   private ResourcePerspectives resourcePerspectives = mock(ResourcePerspectives.class);
   private IssueHandler.Context issueHandlerContext = mock(IssueHandler.Context.class);
-  private Resource resource = mock(Resource.class);
   private DecoratorContext decoratorContext = mock(DecoratorContext.class);
   private IssuesChecker checker;
   private File output;
@@ -57,11 +58,8 @@ public class IssuesCheckerTest {
   @Before
   public void setup() throws Exception {
     output = new File(temporaryFolder.newFolder(), "dump.json");
-    Settings settings = new Settings();
-    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/project/differences.json").getAbsolutePath());
-    settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, output.getAbsolutePath());
+    Settings settings = newCorrectSettings();
     checker = new IssuesChecker(settings, profile, resourcePerspectives);
-    when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(null, null, RulePriority.BLOCKER));
   }
 
   @Test
@@ -82,24 +80,42 @@ public class IssuesCheckerTest {
   }
 
   @Test
-  public void shouldExecuteOnProject() {
+  public void should_fail_when_incorrect_severity() {
+    Settings settings = newCorrectSettings();
+    ActiveRule activeRule = new ActiveRule(profile, Rule.create("repositoryKey", "ruleKey"), RulePriority.BLOCKER);
+    when(profile.getActiveRules()).thenReturn(Arrays.asList(activeRule));
+    when(profile.getName()).thenReturn("profileName");
+
+    thrown.expect(SonarException.class);
+    thrown.expectMessage("Rule 'repositoryKey:ruleKey' must be declared with severity INFO in profile 'profileName'");
+    new IssuesChecker(settings, profile, resourcePerspectives);
+  }
+
+  @Test
+  public void should_execute_on_any_project() {
     assertThat(checker.shouldExecuteOnProject(null)).isTrue();
   }
 
   @Test
   public void should_report_old_issue() {
+    when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
     Issue issue = new DefaultIssue().setSeverity(Severity.INFO).setComponentKey("project:[default].Example").setRuleKey(RuleKey.of("squid", "S00103")).setLine(1);
     when(issueHandlerContext.issue()).thenReturn(issue);
+
     checker.onIssue(issueHandlerContext);
+
     verify(issueHandlerContext).issue();
     verifyNoMoreInteractions(issueHandlerContext);
   }
 
   @Test
   public void should_report_new_issue() {
+    when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
     Issue issue = new DefaultIssue().setComponentKey("componentKey").setRuleKey(RuleKey.of("repository", "rule"));
     when(issueHandlerContext.issue()).thenReturn(issue);
+
     checker.onIssue(issueHandlerContext);
+
     verify(issueHandlerContext).issue();
     verify(issueHandlerContext).setSeverity(Severity.CRITICAL);
     verifyNoMoreInteractions(issueHandlerContext);
@@ -107,14 +123,13 @@ public class IssuesCheckerTest {
 
   @Test
   public void should_report_missing_issues() {
-    when(resource.getScope()).thenReturn(Scopes.FILE);
-    when(resource.getEffectiveKey()).thenReturn("project:[default].Example");
-
+    when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
     Issuable.IssueBuilder issueBuilder = mockIssueBuilder();
     Issue issue = mock(Issue.class);
     when(issueBuilder.build()).thenReturn(issue);
     Issuable issuable = mock(Issuable.class);
     when(issuable.newIssueBuilder()).thenReturn(issueBuilder);
+    Resource resource = mockFile();
     when(resourcePerspectives.as(Issuable.class, resource)).thenReturn(issuable);
 
     checker.decorate(resource, decoratorContext);
@@ -126,36 +141,51 @@ public class IssuesCheckerTest {
 
   @Test
   public void should_not_report_missing_issues() {
+    when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
+    Resource resource = mock(Resource.class);
     when(resource.getScope()).thenReturn(Scopes.PROGRAM_UNIT);
     when(resource.getEffectiveKey()).thenReturn("project:[default].Example");
+
     checker.decorate(resource, decoratorContext);
+
     verifyZeroInteractions(decoratorContext);
   }
 
   @Test
   public void should_not_save_when_no_differences() {
-    when(resource.getScope()).thenReturn(Scopes.PROJECT);
-    when(resource.getEffectiveKey()).thenReturn("project");
-    checker.decorate(resource, decoratorContext);
+    when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
+
+    checker.decorate(mockProject(), decoratorContext);
+
     verifyZeroInteractions(decoratorContext);
     assertThat(output).doesNotExist();
   }
 
   @Test
   public void should_save_when_differences() {
+    when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
     Issuable.IssueBuilder issueBuilder = mockIssueBuilder();
     Issuable issuable = mock(Issuable.class);
     when(issuable.newIssueBuilder()).thenReturn(issueBuilder);
+    Resource resource = mockFile();
     when(resourcePerspectives.as(Issuable.class, resource)).thenReturn(issuable);
 
-    when(resource.getScope()).thenReturn(Scopes.FILE);
-    when(resource.getEffectiveKey()).thenReturn("project:[default].Example");
     checker.decorate(resource, decoratorContext);
-    when(resource.getScope()).thenReturn(Scopes.PROJECT);
-    when(resource.getEffectiveKey()).thenReturn("project");
-    checker.decorate(resource, decoratorContext);
+    checker.decorate(mockProject(), decoratorContext);
 
     assertThat(output).exists();
+  }
+
+  @Test
+  public void should_fail_when_inactive_rules() {
+    checker.decorate(mockFile(), decoratorContext);
+    try {
+      checker.decorate(mockProject(), decoratorContext);
+      fail("Expected exception");
+    } catch (SonarException e) {
+      assertThat(e.getMessage()).isEqualTo("Inactive rules: squid:S00103");
+      assertThat(output).exists();
+    }
   }
 
   private Issuable.IssueBuilder mockIssueBuilder() {
@@ -165,6 +195,27 @@ public class IssuesCheckerTest {
     when(issueBuilder.line(any(Integer.class))).thenReturn(issueBuilder);
     when(issueBuilder.message(any(String.class))).thenReturn(issueBuilder);
     return issueBuilder;
+  }
+
+  private Settings newCorrectSettings() {
+    Settings settings = new Settings();
+    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/project/differences.json").getAbsolutePath());
+    settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, output.getAbsolutePath());
+    return settings;
+  }
+
+  private Resource mockFile() {
+    Resource resource = mock(Resource.class);
+    when(resource.getScope()).thenReturn(Scopes.FILE);
+    when(resource.getEffectiveKey()).thenReturn("project:[default].Example");
+    return resource;
+  }
+
+  private Resource mockProject() {
+    Resource resource = mock(Resource.class);
+    when(resource.getScope()).thenReturn(Scopes.PROJECT);
+    when(resource.getEffectiveKey()).thenReturn("project");
+    return resource;
   }
 
 }
