@@ -50,14 +50,14 @@ public class IssuesCheckerIT {
 
   @Test
   public void differences() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    File output = new File(temporaryFolder.newFolder(), "dump");
     SonarRunner build = SonarRunner.create(projectDir)
         .setProjectKey("project")
         .setProjectName("project")
         .setProjectVersion("1")
         .setSourceDirs("src")
         .setProfile("profile")
-        .setProperties("dump.old", new File(projectDir, "differences.json").toString(), "dump.new", output.toString())
+        .setProperties("dump.old", new File(projectDir, "dumps/differences/").toString(), "dump.new", output.toString())
         .setProperty("sonar.cpd.skip", "true")
         .setProperty("sonar.dynamicAnalysis", "false");
     orchestrator.executeBuild(build);
@@ -72,14 +72,14 @@ public class IssuesCheckerIT {
 
   @Test
   public void no_differences() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    File output = new File(temporaryFolder.newFolder(), "dump");
     SonarRunner build = SonarRunner.create(projectDir)
         .setProjectKey("project")
         .setProjectName("project")
         .setProjectVersion("1")
         .setSourceDirs("src")
         .setProfile("profile")
-        .setProperties("dump.old", new File(projectDir, "no_differences.json").toString(), "dump.new", output.toString())
+        .setProperties("dump.old", new File(projectDir, "dumps/no_differences/").toString(), "dump.new", output.toString())
         .setProperty("sonar.cpd.skip", "true")
         .setProperty("sonar.dynamicAnalysis", "false");
     orchestrator.executeBuild(build);
@@ -92,20 +92,20 @@ public class IssuesCheckerIT {
 
   @Test
   public void rule_removed() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    File output = new File(temporaryFolder.newFolder(), "dump");
     SonarRunner build = SonarRunner.create(projectDir)
       .setProjectKey("project")
       .setProjectName("project")
       .setProjectVersion("1")
       .setSourceDirs("src")
       .setProfile("profile")
-      .setProperties("dump.old", new File(projectDir, "rule_removed.json").toString(), "dump.new", output.toString())
+      .setProperties("dump.old", new File(projectDir, "dumps/rule_removed/").toString(), "dump.new", output.toString())
       .setProperty("sonar.cpd.skip", "true")
       .setProperty("sonar.dynamicAnalysis", "false");
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
     assertThat(buildResult.getStatus()).isNotEqualTo(0);
-    assertThat(buildResult.getLogs()).contains("Inactive rules: squid:NOT_IN_PROFILE");
+    assertThat(buildResult.getLogs()).contains("Inactive rules: squid:not_in_profile");
 
     assertThat(output).exists();
 
@@ -114,14 +114,14 @@ public class IssuesCheckerIT {
 
   @Test
   public void missing_issue_on_file() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    File output = new File(temporaryFolder.newFolder(), "dump");
     SonarRunner build = SonarRunner.create(projectDir)
         .setProjectKey("project")
         .setProjectName("project")
         .setProjectVersion("1")
         .setSourceDirs("src")
         .setProfile("profile")
-        .setProperties("dump.old", new File(projectDir, "missing_issue_on_file.json").toString(), "dump.new", output.toString())
+        .setProperties("dump.old", new File(projectDir, "dumps/missing_issue_on_file/").toString(), "dump.new", output.toString())
         .setProperty("sonar.cpd.skip", "true")
         .setProperty("sonar.dynamicAnalysis", "false");
     orchestrator.executeBuild(build);
@@ -133,14 +133,14 @@ public class IssuesCheckerIT {
 
   @Test
   public void profile_incorrect() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump.json");
+    File output = new File(temporaryFolder.newFolder(), "dump");
     SonarRunner build = SonarRunner.create(projectDir)
         .setProjectKey("project")
         .setProjectName("project")
         .setProjectVersion("1")
         .setSourceDirs("src")
         .setProfile("profile_incorrect")
-        .setProperties("dump.old", new File(projectDir, "differences.json").toString(), "dump.new", output.toString())
+        .setProperties("dump.old", new File(projectDir, "dumps/differences/").toString(), "dump.new", output.toString())
         .setProperty("sonar.cpd.skip", "true")
         .setProperty("sonar.dynamicAnalysis", "false");
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);

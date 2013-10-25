@@ -14,6 +14,7 @@ import com.google.common.io.Closeables;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,15 +23,26 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
 public class Dump {
 
+  private static final String EXT = "json";
+
   private Dump() {
   }
 
-  public static Map<String, Multiset<IssueKey>> load(File file) {
+  public static Map<String, Multiset<IssueKey>> load(File dir) {
+    Map<String, Multiset<IssueKey>> result = Maps.newHashMap();
+    for (File file : FileUtils.listFiles(dir, new String[]{EXT}, false)) {
+      load(file, result);
+    }
+    return result;
+  }
+
+  private static void load(File file, Map<String, Multiset<IssueKey>> result) {
     InputStreamReader in = null;
     JSONObject json;
     try {
@@ -42,75 +54,94 @@ public class Dump {
       Closeables.closeQuietly(in);
     }
 
-    Map<String, Multiset<IssueKey>> result = Maps.newHashMap();
+    String ruleKey = ruleKeyFromFileName(file.getName());
+    for (Map.Entry<String, Object> component : json.entrySet()) {
+      String componentKey = component.getKey();
 
-    for (Map.Entry<String, Object> resource : json.entrySet()) {
-      String resourceKey = resource.getKey();
+      Multiset<IssueKey> issues = result.get(componentKey);
+      if (issues == null) {
+        issues = HashMultiset.create();
+        result.put(componentKey, issues);
+      }
 
-      Multiset<IssueKey> issues = HashMultiset.create();
-      result.put(resourceKey, issues);
-
-      JSONObject rules = (JSONObject) resource.getValue();
-      for (Map.Entry<String, Object> rule : rules.entrySet()) {
-        String ruleKey = rule.getKey();
-        JSONArray lines = (JSONArray) rule.getValue();
-        for (Object line : lines) {
-          issues.add(new IssueKey(resourceKey, ruleKey, (Integer) line));
-        }
+      JSONArray lines = (JSONArray) component.getValue();
+      for (Object line : lines) {
+        issues.add(new IssueKey(componentKey, ruleKey, (Integer) line));
       }
     }
-
-    return result;
   }
 
-  public static void save(List<IssueKey> dump, File file) {
-    PrintStream out = null;
+  public static void save(List<IssueKey> issues, File dir) {
     try {
-      out = new PrintStream(new FileOutputStream(file), /* autoFlush: */ true, Charsets.UTF_8.name());
-      Dump.save(dump, out);
+      FileUtils.forceMkdir(dir);
     } catch (IOException e) {
       throw Throwables.propagate(e);
-    } finally {
-      Closeables.closeQuietly(out);
     }
-  }
 
-  public static void save(List<IssueKey> issues, PrintStream out) {
-    Collections.sort(issues);
+    Collections.sort(issues, new IssueKeyComparator());
 
+    PrintStream out = null;
     String prevRuleKey = null;
     String prevComponentKey = null;
-    out.print("{\n");
     for (IssueKey issueKey : issues) {
-      if (!issueKey.componentKey.equals(prevComponentKey)) {
-        if (prevRuleKey != null) {
-          endComponent(out);
+      if (!issueKey.ruleKey.equals(prevRuleKey)) {
+        if (out != null) {
+          endRule(out);
         }
-        out.print("'" + issueKey.componentKey + "':{\n");
-        startRule(out, issueKey.ruleKey);
-      } else if (!issueKey.ruleKey.equals(prevRuleKey)) {
-        endRule(out);
-        startRule(out, issueKey.ruleKey);
+        try {
+          out = new PrintStream(new FileOutputStream(new File(dir, ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, Charsets.UTF_8.name());
+        } catch (IOException e) {
+          throw Throwables.propagate(e);
+        }
+        out.print("{\n");
+        startComponent(out, issueKey.componentKey);
+      } else if (!issueKey.componentKey.equals(prevComponentKey)) {
+        endComponent(out);
+        startComponent(out, issueKey.componentKey);
       }
       out.print(issueKey.line + ",\n");
       prevComponentKey = issueKey.componentKey;
       prevRuleKey = issueKey.ruleKey;
     }
-    endComponent(out);
-    out.print("}\n");
+    if (out != null) {
+      endRule(out);
+    }
   }
 
-  private static void startRule(PrintStream out, String ruleKey) {
-    out.print("'" + ruleKey + "':[\n");
+  private static String ruleKeyToFileName(String ruleKey) {
+    return ruleKey.replace(':', '-') + "." + EXT;
+  }
+
+  private static String ruleKeyFromFileName(String fileName) {
+    return fileName.replace('-', ':').substring(0, fileName.length() - EXT.length() - 1);
+  }
+
+  private static void startComponent(PrintStream out, String componentKey) {
+    out.print("'" + componentKey + "':[\n");
   }
 
   private static void endComponent(PrintStream out) {
-    endRule(out);
-    out.print("},\n");
+    out.print("],\n");
   }
 
   private static void endRule(PrintStream out) {
-    out.print("],\n");
+    endComponent(out);
+    out.print("}\n");
+    Closeables.closeQuietly(out);
+  }
+
+  private static class IssueKeyComparator implements Comparator<IssueKey> {
+    @Override
+    public int compare(IssueKey left, IssueKey right) {
+      int c = left.ruleKey.compareTo(right.ruleKey);
+      if (c == 0) {
+        c = left.componentKey.compareTo(right.componentKey);
+        if (c == 0) {
+          c = left.line - right.line;
+        }
+      }
+      return c;
+    }
   }
 
 }

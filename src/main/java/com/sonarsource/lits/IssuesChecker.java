@@ -7,11 +7,13 @@ package com.sonarsource.lits;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.Decorator;
@@ -34,6 +36,7 @@ import org.sonar.api.rules.RulePriority;
 import org.sonar.api.utils.SonarException;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,8 +79,8 @@ public class IssuesChecker implements IssueHandler, Decorator {
 
   private Multiset<IssueKey> getByComponentKey(String componentKey) {
     if (previous == null) {
-      if (!oldDumpFile.isFile()) {
-        LOG.warn("File not found: " + oldDumpFile);
+      if (!oldDumpFile.isDirectory()) {
+        LOG.warn("Directory not found: " + oldDumpFile);
         previous = ImmutableMap.of();
       } else {
         LOG.info("Loading " + oldDumpFile);
@@ -129,6 +132,13 @@ public class IssuesChecker implements IssueHandler, Decorator {
       }
     }
     if (Scopes.isProject(resource)) {
+      if (newDumpFile.exists()) {
+        try {
+          FileUtils.forceDelete(newDumpFile);
+        } catch (IOException e) {
+          throw Throwables.propagate(e);
+        }
+      }
       if (different) {
         LOG.info("Saving " + newDumpFile);
         Dump.save(dump, newDumpFile);

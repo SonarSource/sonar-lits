@@ -57,7 +57,7 @@ public class IssuesCheckerTest {
 
   @Before
   public void setup() throws Exception {
-    output = new File(temporaryFolder.newFolder(), "dump.json");
+    output = new File(temporaryFolder.newFolder(), "dump");
     Settings settings = newCorrectSettings();
     checker = new IssuesChecker(settings, profile, resourcePerspectives);
   }
@@ -199,7 +199,7 @@ public class IssuesCheckerTest {
 
   private Settings newCorrectSettings() {
     Settings settings = new Settings();
-    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/project/differences.json").getAbsolutePath());
+    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/project/dumps/differences/").getAbsolutePath());
     settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, output.getAbsolutePath());
     return settings;
   }
