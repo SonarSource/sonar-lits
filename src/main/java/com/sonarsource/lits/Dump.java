@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -42,7 +43,7 @@ public class Dump {
     return result;
   }
 
-  private static void load(File file, Map<String, Multiset<IssueKey>> result) {
+  static void load(File file, Map<String, Multiset<IssueKey>> result) {
     InputStreamReader in = null;
     JSONObject json;
     try {
@@ -130,7 +131,9 @@ public class Dump {
     Closeables.closeQuietly(out);
   }
 
-  private static class IssueKeyComparator implements Comparator<IssueKey> {
+  private static class IssueKeyComparator implements Comparator<IssueKey>, Serializable {
+    private static final long serialVersionUID = 1;
+
     @Override
     public int compare(IssueKey left, IssueKey right) {
       int c = left.ruleKey.compareTo(right.ruleKey);

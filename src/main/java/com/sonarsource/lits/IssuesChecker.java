@@ -132,22 +132,26 @@ public class IssuesChecker implements IssueHandler, Decorator {
       }
     }
     if (Scopes.isProject(resource)) {
-      if (newDumpFile.exists()) {
-        try {
-          FileUtils.forceDelete(newDumpFile);
-        } catch (IOException e) {
-          throw Throwables.propagate(e);
-        }
+      save();
+    }
+  }
+
+  private void save() {
+    if (newDumpFile.exists()) {
+      try {
+        FileUtils.forceDelete(newDumpFile);
+      } catch (IOException e) {
+        throw Throwables.propagate(e);
       }
-      if (different) {
-        LOG.info("Saving " + newDumpFile);
-        Dump.save(dump, newDumpFile);
-      } else {
-        LOG.info("No differences in issues");
-      }
-      if (!inactiveRules.isEmpty()) {
-        throw new SonarException("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
-      }
+    }
+    if (different) {
+      LOG.info("Saving " + newDumpFile);
+      Dump.save(dump, newDumpFile);
+    } else {
+      LOG.info("No differences in issues");
+    }
+    if (!inactiveRules.isEmpty()) {
+      throw new SonarException("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
     }
   }
 

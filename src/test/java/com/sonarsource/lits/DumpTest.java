@@ -7,14 +7,17 @@ package com.sonarsource.lits;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.io.Files;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +27,9 @@ public class DumpTest {
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void save_load() throws Exception {
@@ -64,6 +70,18 @@ public class DumpTest {
     assertThat(dump.size()).isEqualTo(2);
     assertThat(dump.get("componentKey1").size()).isEqualTo(3);
     assertThat(dump.get("componentKey2").size()).isEqualTo(1);
+  }
+
+  @Test
+  public void unable_to_load() throws Exception {
+    thrown.expect(RuntimeException.class);
+    Dump.load(temporaryFolder.newFolder(), Maps.<String, Multiset<IssueKey>>newHashMap());
+  }
+
+  @Test
+  public void unable_to_save() throws Exception {
+    thrown.expect(RuntimeException.class);
+    Dump.save(Collections.<IssueKey>emptyList(), temporaryFolder.newFile());
   }
 
   @Test
