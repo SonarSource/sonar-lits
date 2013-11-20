@@ -5,11 +5,13 @@
  */
 package com.sonarsource.lits;
 
+import com.google.common.collect.Iterables;
 import com.sonar.orchestrator.Orchestrator;
 import com.sonar.orchestrator.build.BuildResult;
 import com.sonar.orchestrator.build.SonarRunner;
 import com.sonar.orchestrator.locator.FileLocation;
 import com.sonar.orchestrator.locator.Location;
+import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -43,7 +45,7 @@ public class IssuesCheckerIT {
   }
 
   private static Location getPluginLocation() {
-    return FileLocation.of("target/sonar-lits-plugin-0.1-SNAPSHOT.jar");
+    return FileLocation.of(Iterables.getOnlyElement(FileUtils.listFiles(new File("target"), new String[]{"jar"}, false)));
   }
 
   private final File projectDir = new File("src/test/project/").getAbsoluteFile();
