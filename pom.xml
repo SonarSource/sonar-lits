@@ -9,7 +9,7 @@
 
   <groupId>com.sonarsource.lits</groupId>
   <artifactId>sonar-lits-plugin</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.3-SNAPSHOT</version>
   <packaging>sonar-plugin</packaging>
 
   <name>Sonar LITS Plugin</name>
