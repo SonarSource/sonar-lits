@@ -87,7 +87,7 @@ public class IssuesCheckerTest {
     when(profile.getName()).thenReturn("profileName");
 
     thrown.expect(SonarException.class);
-    thrown.expectMessage("Rule 'repositoryKey:ruleKey' must be declared with severity INFO in profile 'profileName'");
+    thrown.expectMessage("Rule 'repositoryKey:ruleKey' must be declared with severity INFO");
     new IssuesChecker(settings, profile, resourcePerspectives);
   }
 
@@ -99,7 +99,7 @@ public class IssuesCheckerTest {
   @Test
   public void should_report_old_issue() {
     when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
-    Issue issue = new DefaultIssue().setSeverity(Severity.INFO).setComponentKey("project:[default].Example").setRuleKey(RuleKey.of("squid", "S00103")).setLine(1);
+    Issue issue = new DefaultIssue().setSeverity(Severity.INFO).setComponentKey("project:src/Example.java").setRuleKey(RuleKey.of("squid", "S00103")).setLine(1);
     when(issueHandlerContext.issue()).thenReturn(issue);
 
     checker.onIssue(issueHandlerContext);
@@ -144,7 +144,7 @@ public class IssuesCheckerTest {
     when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
     Resource resource = mock(Resource.class);
     when(resource.getScope()).thenReturn(Scopes.PROGRAM_UNIT);
-    when(resource.getEffectiveKey()).thenReturn("project:[default].Example");
+    when(resource.getEffectiveKey()).thenReturn("project:src/Example.java");
 
     checker.decorate(resource, decoratorContext);
 
@@ -207,7 +207,7 @@ public class IssuesCheckerTest {
   private Resource mockFile() {
     Resource resource = mock(Resource.class);
     when(resource.getScope()).thenReturn(Scopes.FILE);
-    when(resource.getEffectiveKey()).thenReturn("project:[default].Example");
+    when(resource.getEffectiveKey()).thenReturn("project:src/Example.java");
     return resource;
   }
 
