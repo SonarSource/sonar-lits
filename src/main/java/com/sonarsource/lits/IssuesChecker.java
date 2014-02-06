@@ -71,8 +71,7 @@ public class IssuesChecker implements IssueHandler, Decorator {
     this.resourcePerspectives = resourcePerspectives;
     for (ActiveRule activeRule : profile.getActiveRules()) {
       if (activeRule.getSeverity() != RulePriority.INFO) {
-        throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() +
-          "' must be declared with severity INFO in profile '" + profile.getName() + "'");
+        throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity INFO");
       }
     }
   }
