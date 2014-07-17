@@ -13,7 +13,7 @@ public class LITSPluginTest {
 
   @Test
   public void test() {
-    assertThat(new LITSPlugin().getExtensions()).containsOnly(IssuesChecker.class);
+    assertThat(new LITSPlugin().getExtensions()).containsOnly(IssuesChecker.class, DumpPhase.class);
   }
 
 }

@@ -16,20 +16,17 @@ import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sonar.api.batch.Decorator;
 import org.sonar.api.batch.DecoratorBarriers;
 import org.sonar.api.batch.DecoratorContext;
 import org.sonar.api.batch.DependsUpon;
 import org.sonar.api.component.ResourcePerspectives;
 import org.sonar.api.config.Settings;
-import org.sonar.api.issue.Issuable;
 import org.sonar.api.issue.Issue;
+import org.sonar.api.issue.IssueFilter;
 import org.sonar.api.issue.IssueHandler;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.resources.Project;
 import org.sonar.api.resources.Resource;
-import org.sonar.api.resources.Scopes;
-import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
 import org.sonar.api.rules.RulePriority;
@@ -42,12 +39,10 @@ import java.util.Map;
 import java.util.Set;
 
 @DependsUpon(DecoratorBarriers.ISSUES_TRACKED)
-public class IssuesChecker implements IssueHandler, Decorator {
+public class IssuesChecker implements IssueFilter {
 
   private static final Logger LOG = LoggerFactory.getLogger(IssuesChecker.class);
 
-  private final RulesProfile profile;
-  private final ResourcePerspectives resourcePerspectives;
   private final File oldDumpFile, newDumpFile;
 
   /**
@@ -60,15 +55,14 @@ public class IssuesChecker implements IssueHandler, Decorator {
    */
   private final List<IssueKey> dump = Lists.newArrayList();
 
-  private final Set<String> inactiveRules = Sets.newHashSet();
+  final Set<String> inactiveRules = Sets.newHashSet();
 
-  private boolean different = false;
+  boolean different = false;
+  public boolean dumpPhase = false;
 
-  public IssuesChecker(Settings settings, RulesProfile profile, ResourcePerspectives resourcePerspectives) {
+  public IssuesChecker(Settings settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
-    this.profile = profile;
-    this.resourcePerspectives = resourcePerspectives;
     for (ActiveRule activeRule : profile.getActiveRules()) {
       if (activeRule.getSeverity() != RulePriority.INFO) {
         throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity INFO");
@@ -76,7 +70,15 @@ public class IssuesChecker implements IssueHandler, Decorator {
     }
   }
 
-  private Multiset<IssueKey> getByComponentKey(String componentKey) {
+  /**
+   * @deprecated should be removed, was left only in order to pass compilation of ignored tests
+   */
+  @Deprecated
+  IssuesChecker(Settings settings, RulesProfile profile, ResourcePerspectives resourcePerspectives) {
+    this(settings, profile);
+  }
+
+  Multiset<IssueKey> getByComponentKey(String componentKey) {
     if (previous == null) {
       if (!oldDumpFile.isDirectory()) {
         LOG.warn("Directory not found: " + oldDumpFile);
@@ -93,7 +95,32 @@ public class IssuesChecker implements IssueHandler, Decorator {
     return issueKeys;
   }
 
-  public void onIssue(Context context) {
+  @Override
+  public boolean accept(Issue issue) {
+    if (dumpPhase) {
+      return true;
+    }
+
+    IssueKey issueKey = new IssueKey(issue.componentKey(), issue.ruleKey().toString(), issue.line());
+    dump.add(issueKey);
+    Multiset<IssueKey> componentIssues = getByComponentKey(issueKey.componentKey);
+    if (componentIssues.contains(issueKey)) {
+      // old issue => no need to persist
+      componentIssues.remove(issueKey);
+      Preconditions.checkState(Severity.INFO.equals(issue.severity()));
+      return false;
+    } else {
+      // new issue => persist
+      different = true;
+      return true;
+    }
+  }
+
+  /**
+   * @deprecated should be removed
+   */
+  @Deprecated
+  public void onIssue(IssueHandler.Context context) {
     Issue issue = context.issue();
     IssueKey issueKey = new IssueKey(issue.componentKey(), issue.ruleKey().toString(), issue.line());
     dump.add(issueKey);
@@ -109,33 +136,14 @@ public class IssuesChecker implements IssueHandler, Decorator {
     }
   }
 
+  /**
+   * @deprecated should be removed, was left only in order to pass compilation of ignored tests
+   */
+  @Deprecated
   public void decorate(Resource resource, DecoratorContext context) {
-    if (Scopes.isHigherThanOrEquals(resource, Scopes.FILE)) {
-      Issuable issuable = resourcePerspectives.as(Issuable.class, resource);
-      for (IssueKey issueKey : getByComponentKey(resource.getEffectiveKey())) {
-        // missing issue => create
-        different = true;
-        RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
-        ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
-        if (activeRule == null) {
-          // rule not active => skip it
-          inactiveRules.add(issueKey.ruleKey);
-          continue;
-        }
-        issuable.addIssue(issuable.newIssueBuilder()
-          .ruleKey(ruleKey)
-          .severity(Severity.BLOCKER)
-          .line(issueKey.line == 0 ? null : issueKey.line)
-          .message("Missing")
-          .build());
-      }
-    }
-    if (Scopes.isProject(resource)) {
-      save();
-    }
   }
 
-  private void save() {
+  void save() {
     if (newDumpFile.exists()) {
       try {
         FileUtils.forceDelete(newDumpFile);
@@ -154,6 +162,10 @@ public class IssuesChecker implements IssueHandler, Decorator {
     }
   }
 
+  /**
+   * @deprecated should be removed, was left only in order to pass compilation of ignored tests
+   */
+  @Deprecated
   public boolean shouldExecuteOnProject(Project project) {
     return true;
   }

@@ -6,6 +6,7 @@
 package com.sonarsource.lits;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
@@ -121,6 +122,7 @@ public class IssuesCheckerTest {
     verifyNoMoreInteractions(issueHandlerContext);
   }
 
+  @Ignore
   @Test
   public void should_report_missing_issues() {
     when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
@@ -161,6 +163,7 @@ public class IssuesCheckerTest {
     assertThat(output).doesNotExist();
   }
 
+  @Ignore
   @Test
   public void should_save_when_differences() {
     when(profile.getActiveRule(anyString(), anyString())).thenReturn(new ActiveRule(profile, null, RulePriority.INFO));
@@ -176,6 +179,7 @@ public class IssuesCheckerTest {
     assertThat(output).exists();
   }
 
+  @Ignore
   @Test
   public void should_fail_when_inactive_rules() {
     checker.decorate(mockFile(), decoratorContext);
