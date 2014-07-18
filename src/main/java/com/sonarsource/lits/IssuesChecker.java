@@ -58,7 +58,7 @@ public class IssuesChecker implements IssueFilter {
   final Set<String> inactiveRules = Sets.newHashSet();
 
   boolean different = false;
-  public boolean dumpPhase = false;
+  public boolean disabled = false;
 
   public IssuesChecker(Settings settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
@@ -97,7 +97,7 @@ public class IssuesChecker implements IssueFilter {
 
   @Override
   public boolean accept(Issue issue) {
-    if (dumpPhase) {
+    if (disabled) {
       return true;
     }
 

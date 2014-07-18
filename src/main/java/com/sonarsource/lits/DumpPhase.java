@@ -37,7 +37,7 @@ public class DumpPhase implements Decorator {
   @Override
   public void decorate(Resource resource, DecoratorContext context) {
     if (Scopes.isHigherThanOrEquals(resource, Scopes.FILE)) {
-      checker.dumpPhase = true;
+      checker.disabled = true;
 
       Issuable issuable = resourcePerspectives.as(Issuable.class, resource);
       for (IssueKey issueKey : checker.getByComponentKey(resource.getEffectiveKey())) {
@@ -57,6 +57,8 @@ public class DumpPhase implements Decorator {
           .message("Missing")
           .build());
       }
+
+      checker.disabled = false;
     }
     if (Scopes.isProject(resource)) {
       checker.save();
