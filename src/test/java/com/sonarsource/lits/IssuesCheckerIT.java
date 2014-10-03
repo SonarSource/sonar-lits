@@ -41,7 +41,7 @@ public class IssuesCheckerIT {
 
   @Before
   public void resetData() throws Exception {
-    orchestrator.getDatabase().truncateInspectionTables();
+    orchestrator.resetData();
   }
 
   private static Location getPluginLocation() {
