@@ -90,11 +90,22 @@ public class IssuesCheckerTest {
     Issue issue = mock(Issue.class);
     when(issue.componentKey()).thenReturn("");
     when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
-    checker.accept(issue);
 
+    assertThat(checker.accept(issue)).isTrue();
     checker.save();
 
     assertThat(output).exists();
+  }
+
+  @Test
+  public void should_hide_old_issues() {
+    Issue issue = mock(Issue.class);
+    when(issue.componentKey()).thenReturn("project:src/Example.java");
+    when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
+    when(issue.line()).thenReturn(1);
+    when(issue.severity()).thenReturn("INFO");
+
+    assertThat(checker.accept(issue)).isFalse();
   }
 
   @Test
