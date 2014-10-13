@@ -68,8 +68,6 @@ public class IssuesCheckerIT {
 
     assertThat(project().getMeasure("violations").getValue()).isEqualTo(2);
     assertThat(violation("BLOCKER").line()).isEqualTo(3);
-//    assertThat(violation("CRITICAL").line()).isEqualTo(2);
-//    assertThat(violation("INFO").line()).isEqualTo(1);
     assertThat(violation("INFO").line()).isEqualTo(2);
   }
 
@@ -90,7 +88,6 @@ public class IssuesCheckerIT {
     assertThat(output).doesNotExist();
 
     assertThat(project().getMeasure("violations").getValue()).isEqualTo(0);
-//    assertThat(violations("INFO").size()).isEqualTo(2);
   }
 
   @Test

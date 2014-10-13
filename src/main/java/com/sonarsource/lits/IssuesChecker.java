@@ -17,16 +17,11 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.DecoratorBarriers;
-import org.sonar.api.batch.DecoratorContext;
 import org.sonar.api.batch.DependsUpon;
-import org.sonar.api.component.ResourcePerspectives;
 import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issue;
 import org.sonar.api.issue.IssueFilter;
-import org.sonar.api.issue.IssueHandler;
 import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.resources.Project;
-import org.sonar.api.resources.Resource;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
 import org.sonar.api.rules.RulePriority;
@@ -70,14 +65,6 @@ public class IssuesChecker implements IssueFilter {
     }
   }
 
-  /**
-   * @deprecated should be removed, was left only in order to pass compilation of ignored tests
-   */
-  @Deprecated
-  IssuesChecker(Settings settings, RulesProfile profile, ResourcePerspectives resourcePerspectives) {
-    this(settings, profile);
-  }
-
   Multiset<IssueKey> getByComponentKey(String componentKey) {
     if (previous == null) {
       if (!oldDumpFile.isDirectory()) {
@@ -116,33 +103,6 @@ public class IssuesChecker implements IssueFilter {
     }
   }
 
-  /**
-   * @deprecated should be removed
-   */
-  @Deprecated
-  public void onIssue(IssueHandler.Context context) {
-    Issue issue = context.issue();
-    IssueKey issueKey = new IssueKey(issue.componentKey(), issue.ruleKey().toString(), issue.line());
-    dump.add(issueKey);
-    Multiset<IssueKey> componentIssues = getByComponentKey(issueKey.componentKey);
-    if (componentIssues.contains(issueKey)) {
-      // old issue => supposed that it was created with severity from profile
-      componentIssues.remove(issueKey);
-      Preconditions.checkState(Severity.INFO.equals(issue.severity()));
-    } else {
-      // new issue => increase severity
-      context.setSeverity(Severity.CRITICAL);
-      different = true;
-    }
-  }
-
-  /**
-   * @deprecated should be removed, was left only in order to pass compilation of ignored tests
-   */
-  @Deprecated
-  public void decorate(Resource resource, DecoratorContext context) {
-  }
-
   void save() {
     if (newDumpFile.exists()) {
       try {
@@ -160,14 +120,6 @@ public class IssuesChecker implements IssueFilter {
     if (!inactiveRules.isEmpty()) {
       throw new SonarException("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
     }
-  }
-
-  /**
-   * @deprecated should be removed, was left only in order to pass compilation of ignored tests
-   */
-  @Deprecated
-  public boolean shouldExecuteOnProject(Project project) {
-    return true;
   }
 
   private static File getFile(Settings settings, String property) {
