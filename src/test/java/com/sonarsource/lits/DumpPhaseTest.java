@@ -6,6 +6,8 @@
 package com.sonarsource.lits;
 
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableMultiset;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,6 +20,8 @@ import org.sonar.api.resources.Resource;
 import org.sonar.api.resources.Scopes;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
+
+import java.util.Map;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Matchers.any;
@@ -79,6 +83,23 @@ public class DumpPhaseTest {
     decorator.decorate(resource, context);
 
     verify(issuable).addIssue(any(Issue.class));
+  }
+
+  @Test
+  public void should_report_missing_files() {
+    Resource resource = mockProject();
+    DecoratorContext context = mock(DecoratorContext.class);
+
+    Map<String, Multiset<IssueKey>> previous = Maps.newHashMap();
+    Multiset<IssueKey> issues = HashMultiset.create();
+    issues.add(new IssueKey("", "squid:S00103", null));
+    previous.put("missing", issues);
+    when(checker.getPrevious()).thenReturn(previous);
+    when(checker.getByComponentKey(anyString())).thenReturn(ImmutableMultiset.<IssueKey>of());
+
+    decorator.decorate(resource, context);
+
+    verify(checker).missingResource("missing");
   }
 
   private Issuable.IssueBuilder mockIssueBuilder() {

@@ -51,7 +51,7 @@ public class DumpPhase implements Decorator {
           ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
           if (activeRule == null) {
             // rule not active => skip it
-            checker.inactiveRules.add(issueKey.ruleKey);
+            checker.inactiveRule(issueKey.ruleKey);
             continue;
           }
           issuable.addIssue(issuable.newIssueBuilder()
@@ -69,7 +69,7 @@ public class DumpPhase implements Decorator {
       for (Map.Entry<String, Multiset<IssueKey>> entry : checker.getPrevious().entrySet()) {
         if (!entry.getValue().isEmpty()) {
           checker.different = true;
-          checker.missingResources.add(entry.getKey());
+          checker.missingResource(entry.getKey());
         }
       }
       checker.save();

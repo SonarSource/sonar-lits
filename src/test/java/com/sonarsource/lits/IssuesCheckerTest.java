@@ -110,16 +110,24 @@ public class IssuesCheckerTest {
 
   @Test
   public void should_fail_when_inactive_rules() {
-    Issue issue = mock(Issue.class);
-    when(issue.componentKey()).thenReturn("");
-    when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
-    checker.accept(issue);
-    checker.inactiveRules.add("squid:S00103");
+    checker.inactiveRule("squid:S00103");
     try {
       checker.save();
       fail("Expected exception");
     } catch (SonarException e) {
       assertThat(e.getMessage()).isEqualTo("Inactive rules: squid:S00103");
+      assertThat(output).exists();
+    }
+  }
+
+  @Test
+  public void should_fail_when_missing_resources() {
+    checker.missingResource("missing_resource");
+    try {
+      checker.save();
+      fail("Expected exception");
+    } catch (SonarException e) {
+      assertThat(e.getMessage()).isEqualTo("Missing resources: missing_resource");
       assertThat(output).exists();
     }
   }

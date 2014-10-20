@@ -50,11 +50,11 @@ public class IssuesChecker implements IssueFilter {
    */
   private final List<IssueKey> dump = Lists.newArrayList();
 
-  final Set<String> inactiveRules = Sets.newHashSet();
-  final Set<String> missingResources = Sets.newHashSet();
+  private final Set<String> inactiveRules = Sets.newHashSet();
+  private final Set<String> missingResources = Sets.newHashSet();
 
   boolean different = false;
-  public boolean disabled = false;
+  boolean disabled = false;
 
   public IssuesChecker(Settings settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
@@ -106,6 +106,16 @@ public class IssuesChecker implements IssueFilter {
       different = true;
       return true;
     }
+  }
+
+  public void inactiveRule(String ruleKey) {
+    different = true;
+    inactiveRules.add(ruleKey);
+  }
+
+  public void missingResource(String componentKey) {
+    different = true;
+    missingResources.add(componentKey);
   }
 
   void save() {

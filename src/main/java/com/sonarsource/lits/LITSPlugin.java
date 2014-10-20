@@ -15,6 +15,7 @@ public class LITSPlugin extends SonarPlugin {
   public static final String OLD_DUMP_PROPERTY = "dump.old";
   public static final String NEW_DUMP_PROPERTY = "dump.new";
 
+  @Override
   public List getExtensions() {
     return ImmutableList.of(IssuesChecker.class, DumpPhase.class);
   }
