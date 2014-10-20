@@ -5,6 +5,7 @@
  */
 package com.sonarsource.lits;
 
+import com.google.common.collect.Multiset;
 import org.sonar.api.batch.Decorator;
 import org.sonar.api.batch.DecoratorContext;
 import org.sonar.api.component.ResourcePerspectives;
@@ -16,6 +17,8 @@ import org.sonar.api.resources.Scopes;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
+
+import java.util.Map;
 
 public class DumpPhase implements Decorator {
 
@@ -37,30 +40,38 @@ public class DumpPhase implements Decorator {
   @Override
   public void decorate(Resource resource, DecoratorContext context) {
     if (Scopes.isHigherThanOrEquals(resource, Scopes.FILE)) {
-      checker.disabled = true;
-
       Issuable issuable = resourcePerspectives.as(Issuable.class, resource);
-      for (IssueKey issueKey : checker.getByComponentKey(resource.getEffectiveKey())) {
-        // missing issue => create
-        checker.different = true;
-        RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
-        ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
-        if (activeRule == null) {
-          // rule not active => skip it
-          checker.inactiveRules.add(issueKey.ruleKey);
-          continue;
+      Multiset<IssueKey> componentIssues = checker.getByComponentKey(resource.getEffectiveKey());
+      if (!componentIssues.isEmpty()) {
+        checker.disabled = true;
+        for (IssueKey issueKey : checker.getByComponentKey(resource.getEffectiveKey())) {
+          // missing issue => create
+          checker.different = true;
+          RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
+          ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
+          if (activeRule == null) {
+            // rule not active => skip it
+            checker.inactiveRules.add(issueKey.ruleKey);
+            continue;
+          }
+          issuable.addIssue(issuable.newIssueBuilder()
+            .ruleKey(ruleKey)
+            .severity(Severity.BLOCKER)
+            .line(issueKey.line == 0 ? null : issueKey.line)
+            .message("Missing")
+            .build());
         }
-        issuable.addIssue(issuable.newIssueBuilder()
-          .ruleKey(ruleKey)
-          .severity(Severity.BLOCKER)
-          .line(issueKey.line == 0 ? null : issueKey.line)
-          .message("Missing")
-          .build());
+        checker.disabled = false;
+        componentIssues.clear();
       }
-
-      checker.disabled = false;
     }
     if (Scopes.isProject(resource)) {
+      for (Map.Entry<String, Multiset<IssueKey>> entry : checker.getPrevious().entrySet()) {
+        if (!entry.getValue().isEmpty()) {
+          checker.different = true;
+          checker.missingResources.add(entry.getKey());
+        }
+      }
       checker.save();
     }
   }

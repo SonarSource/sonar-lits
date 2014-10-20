@@ -51,6 +51,7 @@ public class IssuesChecker implements IssueFilter {
   private final List<IssueKey> dump = Lists.newArrayList();
 
   final Set<String> inactiveRules = Sets.newHashSet();
+  final Set<String> missingResources = Sets.newHashSet();
 
   boolean different = false;
   public boolean disabled = false;
@@ -65,7 +66,7 @@ public class IssuesChecker implements IssueFilter {
     }
   }
 
-  Multiset<IssueKey> getByComponentKey(String componentKey) {
+  Map<String, Multiset<IssueKey>> getPrevious() {
     if (previous == null) {
       if (!oldDumpFile.isDirectory()) {
         LOG.warn("Directory not found: " + oldDumpFile);
@@ -75,7 +76,11 @@ public class IssuesChecker implements IssueFilter {
         previous = Dump.load(oldDumpFile);
       }
     }
-    Multiset<IssueKey> issueKeys = previous.get(componentKey);
+    return previous;
+  }
+
+  Multiset<IssueKey> getByComponentKey(String componentKey) {
+    Multiset<IssueKey> issueKeys = getPrevious().get(componentKey);
     if (issueKeys == null) {
       issueKeys = ImmutableMultiset.of();
     }
@@ -119,6 +124,9 @@ public class IssuesChecker implements IssueFilter {
     }
     if (!inactiveRules.isEmpty()) {
       throw new SonarException("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
+    }
+    if (!missingResources.isEmpty()) {
+      throw new SonarException("Missing resources: " + Joiner.on(", ").join(missingResources));
     }
   }
 
