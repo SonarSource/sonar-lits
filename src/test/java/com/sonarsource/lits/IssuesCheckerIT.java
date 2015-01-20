@@ -34,6 +34,7 @@ public class IssuesCheckerIT {
 
   @ClassRule
   public static Orchestrator orchestrator = Orchestrator.builderEnv()
+    .addPlugin("java")
     .addPlugin(getPluginLocation())
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile.xml"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile_incorrect.xml"))
