@@ -25,7 +25,7 @@ import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
 import org.sonar.api.rules.RulePriority;
-import org.sonar.api.utils.SonarException;
+import org.sonar.api.utils.MessageException;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,7 +61,7 @@ public class IssuesChecker implements IssueFilter {
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
     for (ActiveRule activeRule : profile.getActiveRules()) {
       if (activeRule.getSeverity() != RulePriority.INFO) {
-        throw new SonarException("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity INFO");
+        throw MessageException.of("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity INFO");
       }
     }
   }
@@ -133,21 +133,21 @@ public class IssuesChecker implements IssueFilter {
       LOG.info("No differences in issues");
     }
     if (!inactiveRules.isEmpty()) {
-      throw new SonarException("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
+      throw MessageException.of("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
     }
     if (!missingResources.isEmpty()) {
-      throw new SonarException("Missing resources: " + Joiner.on(", ").join(missingResources));
+      throw MessageException.of("Missing resources: " + Joiner.on(", ").join(missingResources));
     }
   }
 
   private static File getFile(Settings settings, String property) {
     String path = settings.getString(property);
     if (path == null) {
-      throw new SonarException("Missing property '" + property + "'");
+      throw MessageException.of("Missing property '" + property + "'");
     }
     File file = new File(path);
     if (!file.isAbsolute()) {
-      throw new SonarException("Path must be absolute - check property '" + property + "'");
+      throw MessageException.of("Path must be absolute - check property '" + property + "'" );
     }
     return file;
   }

@@ -17,7 +17,7 @@ import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
 import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.RulePriority;
-import org.sonar.api.utils.SonarException;
+import org.sonar.api.utils.MessageException;
 
 import java.io.File;
 import java.util.Arrays;
@@ -51,7 +51,7 @@ public class IssuesCheckerTest {
   @Test
   public void path_must_be_specified() {
     Settings settings = new Settings();
-    thrown.expect(SonarException.class);
+    thrown.expect(MessageException.class);
     thrown.expectMessage("Missing property 'dump.old'");
     new IssuesChecker(settings, profile);
   }
@@ -60,7 +60,7 @@ public class IssuesCheckerTest {
   public void path_must_be_absolute() {
     Settings settings = new Settings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
-    thrown.expect(SonarException.class);
+    thrown.expect(MessageException.class);
     thrown.expectMessage("Path must be absolute - check property 'dump.old'");
     new IssuesChecker(settings, profile);
   }
@@ -72,7 +72,7 @@ public class IssuesCheckerTest {
     when(profile.getActiveRules()).thenReturn(Arrays.asList(activeRule));
     when(profile.getName()).thenReturn("profileName");
 
-    thrown.expect(SonarException.class);
+    thrown.expect(MessageException.class);
     thrown.expectMessage("Rule 'repositoryKey:ruleKey' must be declared with severity INFO");
     new IssuesChecker(settings, profile);
   }
@@ -114,7 +114,7 @@ public class IssuesCheckerTest {
     try {
       checker.save();
       fail("Expected exception");
-    } catch (SonarException e) {
+    } catch (MessageException e) {
       assertThat(e.getMessage()).isEqualTo("Inactive rules: squid:S00103");
       assertThat(output).exists();
     }
@@ -126,7 +126,7 @@ public class IssuesCheckerTest {
     try {
       checker.save();
       fail("Expected exception");
-    } catch (SonarException e) {
+    } catch (MessageException e) {
       assertThat(e.getMessage()).isEqualTo("Missing resources: missing_resource");
       assertThat(output).exists();
     }
