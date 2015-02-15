@@ -129,14 +129,15 @@ public class IssuesChecker implements IssueFilter {
     if (different) {
       LOG.info("Saving " + newDumpFile);
       Dump.save(dump, newDumpFile);
-    } else {
-      LOG.info("No differences in issues");
     }
     if (!inactiveRules.isEmpty()) {
       throw MessageException.of("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
     }
     if (!missingResources.isEmpty()) {
       throw MessageException.of("Missing resources: " + Joiner.on(", ").join(missingResources));
+    }
+    if (!different) {
+      throw MessageException.of("LITS: No differences in issues");
     }
   }
 
