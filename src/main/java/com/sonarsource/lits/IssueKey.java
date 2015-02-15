@@ -47,6 +47,7 @@ public class IssueKey implements Comparable<IssueKey> {
     return componentKey + " " + ruleKey + " " + line;
   }
 
+  @Override
   public int compareTo(IssueKey other) {
     // Godin: maybe would be better for performance to use FastStringComparator from sonar-duplications
     int c = this.componentKey.compareTo(other.componentKey);
