@@ -38,7 +38,7 @@
   </issueManagement>
 
   <properties>
-    <sonar.version>4.5</sonar.version>
+    <sonar.version>4.5.2</sonar.version>
     <sonar.pluginName>LITS</sonar.pluginName>
     <sonar.pluginClass>com.sonarsource.lits.LITSPlugin</sonar.pluginClass>
 
