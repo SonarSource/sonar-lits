@@ -40,10 +40,12 @@ public class IssuesCheckerTest {
   private DecoratorContext decoratorContext = mock(DecoratorContext.class);
   private IssuesChecker checker;
   private File output;
+  private File assertion;
 
   @Before
   public void setup() throws Exception {
     output = new File(temporaryFolder.newFolder(), "dump");
+    assertion = new File(temporaryFolder.newFolder(), "assertion");
     Settings settings = newCorrectSettings();
     checker = new IssuesChecker(settings, profile);
   }
@@ -91,7 +93,7 @@ public class IssuesCheckerTest {
     when(issue.componentKey()).thenReturn("");
     when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
 
-    assertThat(checker.accept(issue)).isTrue();
+    assertThat(checker.accept(issue, null)).isTrue();
     checker.save();
 
     assertThat(output).exists();
@@ -105,7 +107,7 @@ public class IssuesCheckerTest {
     when(issue.line()).thenReturn(1);
     when(issue.severity()).thenReturn("INFO");
 
-    assertThat(checker.accept(issue)).isFalse();
+    assertThat(checker.accept(issue, null)).isFalse();
   }
 
   @Test
@@ -136,6 +138,7 @@ public class IssuesCheckerTest {
     Settings settings = new Settings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/project/dumps/differences/").getAbsolutePath());
     settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, output.getAbsolutePath());
+    settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, assertion.getAbsolutePath());
     return settings;
   }
 

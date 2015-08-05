@@ -14,6 +14,7 @@ public class LITSPlugin extends SonarPlugin {
 
   public static final String OLD_DUMP_PROPERTY = "dump.old";
   public static final String NEW_DUMP_PROPERTY = "dump.new";
+  public static final String DIFFERENCES_PROPERTY = "lits.differences";
 
   @Override
   public List getExtensions() {

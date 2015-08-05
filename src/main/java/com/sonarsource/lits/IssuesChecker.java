@@ -16,29 +16,30 @@ import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sonar.api.batch.DecoratorBarriers;
-import org.sonar.api.batch.DependsUpon;
 import org.sonar.api.config.Settings;
 import org.sonar.api.issue.Issue;
-import org.sonar.api.issue.IssueFilter;
+import org.sonar.api.issue.batch.IssueFilter;
+import org.sonar.api.issue.batch.IssueFilterChain;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
-import org.sonar.api.rules.RulePriority;
 import org.sonar.api.utils.MessageException;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@DependsUpon(DecoratorBarriers.ISSUES_TRACKED)
 public class IssuesChecker implements IssueFilter {
 
   private static final Logger LOG = LoggerFactory.getLogger(IssuesChecker.class);
 
   private final File oldDumpFile, newDumpFile;
+  private File differencesFile;
 
   /**
    * Previous findings indexed by {@link IssueKey#componentKey}.
@@ -55,12 +56,16 @@ public class IssuesChecker implements IssueFilter {
 
   boolean different = false;
   boolean disabled = false;
+  int differences = 0;
 
   public IssuesChecker(Settings settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
+    if (settings.hasKey(LITSPlugin.DIFFERENCES_PROPERTY)) {
+      differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY);
+    }
     for (ActiveRule activeRule : profile.getActiveRules()) {
-      if (activeRule.getSeverity() != RulePriority.INFO) {
+      if (!activeRule.getSeverity().toString().equals(Severity.INFO)) {
         throw MessageException.of("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity INFO");
       }
     }
@@ -88,7 +93,7 @@ public class IssuesChecker implements IssueFilter {
   }
 
   @Override
-  public boolean accept(Issue issue) {
+  public boolean accept(Issue issue, IssueFilterChain chain) {
     if (disabled) {
       return true;
     }
@@ -104,6 +109,7 @@ public class IssuesChecker implements IssueFilter {
     } else {
       // new issue => persist
       different = true;
+      differences++;
       return true;
     }
   }
@@ -118,25 +124,48 @@ public class IssuesChecker implements IssueFilter {
     missingResources.add(componentKey);
   }
 
-  void save() {
-    if (newDumpFile.exists()) {
+  private static void forceDelete(File file) {
+    if (file.exists()) {
       try {
-        FileUtils.forceDelete(newDumpFile);
+        FileUtils.forceDelete(file);
       } catch (IOException e) {
         throw Throwables.propagate(e);
       }
     }
+  }
+
+  void save() {
+    forceDelete(newDumpFile);
+    List<String> messages = new ArrayList<>();
+    MessageException exception = null;
     if (different) {
       LOG.info("Saving " + newDumpFile);
       Dump.save(dump, newDumpFile);
+      messages.add("Issues differences: " + differences);
     } else {
       LOG.info("No differences in issues");
     }
     if (!inactiveRules.isEmpty()) {
-      throw MessageException.of("Inactive rules: " + Joiner.on(", ").join(inactiveRules));
+      String message = "Inactive rules: " + Joiner.on(", ").join(inactiveRules);
+      messages.add(message);
+      exception = MessageException.of(message);
     }
     if (!missingResources.isEmpty()) {
-      throw MessageException.of("Missing resources: " + Joiner.on(", ").join(missingResources));
+      String message = "Missing resources: " + Joiner.on(", ").join(missingResources);
+      messages.add(message);
+      exception = MessageException.of(message);
+    }
+    if (differencesFile != null) {
+      forceDelete(differencesFile);
+      try {
+        differencesFile.createNewFile();
+        Files.write(differencesFile.toPath(), Joiner.on("\n").join(messages).getBytes(StandardCharsets.UTF_8));
+      } catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+    if (exception != null) {
+      throw exception;
     }
   }
 
