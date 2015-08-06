@@ -84,14 +84,11 @@ public class IssuesCheckerIT {
       .setProperties("dump.old", new File(projectDir, "dumps/no_differences/").toString(), "dump.new", output.toString())
       .setProperty("sonar.cpd.skip", "true")
       .setProperty("sonar.dynamicAnalysis", "false");
-    BuildResult buildResult = orchestrator.executeBuildQuietly(build);
-
-    assertThat(buildResult.getStatus()).isNotEqualTo(0);
-    assertThat(buildResult.getLogs()).contains("Caused by: LITS: No differences in issues");
+    orchestrator.executeBuild(build);
 
     assertThat(output).doesNotExist();
 
-    assertThat(project()).isNull();
+    assertThat(project().getMeasure("violations").getValue()).isEqualTo(0);
   }
 
   @Test

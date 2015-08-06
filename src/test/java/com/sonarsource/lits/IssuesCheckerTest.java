@@ -5,7 +5,6 @@
  */
 package com.sonarsource.lits;
 
-import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -80,12 +79,7 @@ public class IssuesCheckerTest {
 
   @Test
   public void should_not_save_when_no_differences() {
-    try {
-      checker.save();
-      Assert.fail("exception expected");
-    } catch (MessageException e) {
-      assertThat(e.getMessage()).isEqualTo("LITS: No differences in issues");
-    }
+    checker.save();
 
     verifyZeroInteractions(decoratorContext);
     assertThat(output).doesNotExist();
