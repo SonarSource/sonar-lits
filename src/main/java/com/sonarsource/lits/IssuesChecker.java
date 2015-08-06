@@ -52,8 +52,9 @@ public class IssuesChecker implements IssueFilter {
 
   private static final Logger LOG = LoggerFactory.getLogger(IssuesChecker.class);
 
-  private final File oldDumpFile, newDumpFile;
-  private File differencesFile;
+  private final File oldDumpFile;
+  private final File newDumpFile;
+  private final File differencesFile;
 
   /**
    * Previous findings indexed by {@link IssueKey#componentKey}.
@@ -75,9 +76,7 @@ public class IssuesChecker implements IssueFilter {
   public IssuesChecker(Settings settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
-    if (settings.hasKey(LITSPlugin.DIFFERENCES_PROPERTY)) {
-      differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY);
-    }
+    differencesFile = settings.hasKey(LITSPlugin.DIFFERENCES_PROPERTY) ? getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY) : null;
     for (ActiveRule activeRule : profile.getActiveRules()) {
       if (!activeRule.getSeverity().toString().equals(Severity.INFO)) {
         throw MessageException.of("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity INFO");

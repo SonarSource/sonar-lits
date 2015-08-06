@@ -79,6 +79,10 @@ public class DumpPhase implements Sensor {
   @VisibleForTesting
   protected void createMissingIssues(Resource resource) {
     Issuable issuable = resourcePerspectives.as(Issuable.class, resource);
+    if (issuable == null) {
+      // not indexed
+      return;
+    }
     Multiset<IssueKey> componentIssues = checker.getByComponentKey(resource.getEffectiveKey());
     if (!componentIssues.isEmpty()) {
       checker.disabled = true;
