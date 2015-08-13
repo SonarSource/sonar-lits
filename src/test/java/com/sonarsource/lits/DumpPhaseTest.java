@@ -30,6 +30,7 @@ import org.sonar.api.batch.SensorContext;
 import org.sonar.api.batch.fs.FilePredicate;
 import org.sonar.api.batch.fs.FilePredicates;
 import org.sonar.api.batch.fs.FileSystem;
+import org.sonar.api.batch.fs.InputDir;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.InputPath;
 import org.sonar.api.component.ResourcePerspectives;
@@ -48,6 +49,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -90,6 +92,7 @@ public class DumpPhaseTest {
 
     Multiset<IssueKey> issues = HashMultiset.create();
     issues.add(new IssueKey("", "squid:S00103", null));
+    issues.add(new IssueKey("", "squid:S00104", null));
     when(checker.getByComponentKey(anyString())).thenReturn(issues);
 
     ActiveRule activeRule = mock(ActiveRule.class);
@@ -98,17 +101,20 @@ public class DumpPhaseTest {
     Issuable.IssueBuilder issueBuilder = mockIssueBuilder();
     Issuable issuable = mock(Issuable.class);
     when(issuable.newIssueBuilder()).thenReturn(issueBuilder);
-    when(resourcePerspectives.as(eq(Issuable.class), any(Resource.class))).thenReturn(issuable);
+    when(resourcePerspectives.as(eq(Issuable.class), any(Resource.class))).thenReturn(issuable, null);
 
     SensorContext sensorContext = mock(SensorContext.class);
     Resource resource = mock(Resource.class);
     when(sensorContext.getResource(any(InputPath.class))).thenReturn(resource);
 
     InputFile inputFile = mock(InputFile.class);
-    when(fs.inputFiles(any(FilePredicate.class))).thenReturn(ImmutableList.of(inputFile));
+    InputFile inputFile2 = mock(InputFile.class);
+    InputDir inputDir = mock(InputDir.class);
+    when(fs.inputDir(inputFile.file())).thenReturn(inputDir);
+    when(fs.inputFiles(any(FilePredicate.class))).thenReturn(ImmutableList.of(inputFile, inputFile2));
     decorator.analyse(project, sensorContext);
 
-    verify(issuable).addIssue(any(Issue.class));
+    verify(issuable, times(1)).addIssue(any(Issue.class));
   }
 
   @Test

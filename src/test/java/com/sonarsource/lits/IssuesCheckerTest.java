@@ -114,6 +114,19 @@ public class IssuesCheckerTest {
   }
 
   @Test
+  public void should_not_save_when_disabled() {
+    Issue issue = mock(Issue.class);
+    when(issue.componentKey()).thenReturn("");
+    when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
+
+    checker.disabled = true;
+    assertThat(checker.accept(issue, null)).isTrue();
+    checker.save();
+
+    assertThat(output).doesNotExist();
+  }
+
+  @Test
   public void should_hide_old_issues() {
     Issue issue = mock(Issue.class);
     when(issue.componentKey()).thenReturn("project:src/Example.java");
