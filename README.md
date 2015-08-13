@@ -2,5 +2,4 @@
 Sonar LITS
 ==========
 
-[![Build Status](https://magnum.travis-ci.com/SonarSource/sonar-lits.svg?token=3XpTRCVte8pGeDAQqnN8&branch=master)](https://magnum.travis-ci.com/SonarSource/sonar-lits)
-
+[![Build Status](https://travis-ci.org/SonarSource/sonar-lits.svg?branch=master)](https://travis-ci.org/SonarSource/sonar-lits)
