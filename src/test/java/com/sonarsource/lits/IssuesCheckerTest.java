@@ -172,7 +172,7 @@ public class IssuesCheckerTest {
 
   private Settings newCorrectSettings() {
     Settings settings = new Settings();
-    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/project/dumps/differences/").getAbsolutePath());
+    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/resources/").getAbsolutePath());
     settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, output.getAbsolutePath());
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, assertion.getAbsolutePath());
     return settings;

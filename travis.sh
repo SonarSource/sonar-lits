@@ -8,6 +8,28 @@ function installTravisTools {
   source ~/.local/bin/install
 }
 
-installTravisTools
+case "$TEST" in
 
-mvn verify -B -e -V
+ci)
+  mvn verify -B -e -V
+  ;;
+
+plugin)
+  installTravisTools
+
+  mvn package -Dsource.skip=true -Denforcer.skip=true -Danimal.sniffer.skip=true -Dmaven.test.skip=true
+
+  if [ "$SQ_VERSION" = "DEV" ] ; then
+    build_snapshot "SonarSource/sonarqube"
+  fi
+
+  cd its/plugin
+  mvn -DjavaVersion=LATEST_RELEASE -Dsonar.runtimeVersion="$SQ_VERSION" -Dmaven.test.redirectTestOutputToFile=false install
+  ;;
+
+*)
+  echo "Unexpected TEST mode: $TEST"
+  exit 1
+  ;;
+
+esac

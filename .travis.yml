@@ -6,6 +6,14 @@ jdk:
 
 install: true
 script: ./travis.sh
+env:
+  - TEST=ci
+  - TEST=plugin
+    SQ_VERSION=DEV
+  - TEST=plugin
+    SQ_VERSION=LATEST_RELEASE
+  - TEST=plugin
+    SQ_VERSION=LTS
 
 matrix:
   fast_finish: true

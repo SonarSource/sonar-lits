@@ -1,5 +1,5 @@
 /*
- * Sonar LITS Plugin
+ * SonarSource :: LITS :: ITs :: Plugin
  * Copyright (C) 2013 SonarSource
  * sonarqube@googlegroups.com
  *
@@ -17,15 +17,12 @@
  * License along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02
  */
-package com.sonarsource.lits;
+package com.sonar.it.lits;
 
-import com.google.common.collect.Iterables;
 import com.sonar.orchestrator.Orchestrator;
 import com.sonar.orchestrator.build.BuildResult;
 import com.sonar.orchestrator.build.SonarRunner;
 import com.sonar.orchestrator.locator.FileLocation;
-import com.sonar.orchestrator.locator.Location;
-import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -37,11 +34,12 @@ import org.sonar.wsclient.services.Resource;
 import org.sonar.wsclient.services.ResourceQuery;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import static org.fest.assertions.Assertions.assertThat;
 
-public class IssuesCheckerIT {
+public class LitsTest {
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -49,7 +47,7 @@ public class IssuesCheckerIT {
   @ClassRule
   public static Orchestrator orchestrator = Orchestrator.builderEnv()
     .addPlugin("java")
-    .addPlugin(getPluginLocation())
+    .addPlugin(FileLocation.of("../../target/sonar-lits-plugin.jar"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile.xml"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile_incorrect.xml"))
     .build();
@@ -57,47 +55,28 @@ public class IssuesCheckerIT {
   @Before
   public void resetData() throws Exception {
     orchestrator.resetData();
-  }
-
-  private static Location getPluginLocation() {
-    return FileLocation.of(Iterables.getOnlyElement(FileUtils.listFiles(new File("target"), new String[] {"jar"}, false)));
+    output = new File(temporaryFolder.newFolder(), "dump");
   }
 
   private final File projectDir = new File("src/test/project/").getAbsoluteFile();
+  private File output = null;
 
   @Test
   public void differences() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump");
-    SonarRunner build = SonarRunner.create(projectDir)
-      .setProjectKey("project")
-      .setProjectName("project")
-      .setProjectVersion("1")
-      .setSourceDirs("src")
-      .setProfile("profile")
-      .setProperties("dump.old", new File(projectDir, "dumps/differences/").toString(), "dump.new", output.toString())
-      .setProperty("sonar.cpd.skip", "true")
-      .setProperty("sonar.dynamicAnalysis", "false");
+    SonarRunner build = createSonarRunner("dumps/differences/");
     orchestrator.executeBuild(build);
 
     assertThat(output).exists();
 
     assertThat(project().getMeasure("violations").getValue()).isEqualTo(2);
-    assertThat(violation("BLOCKER").line()).isEqualTo(3);
-    assertThat(violation("INFO").line()).isEqualTo(2);
+    assertThat(issue("BLOCKER").line()).isEqualTo(3);
+    assertThat(issue("INFO").line()).isEqualTo(2);
   }
 
   @Test
   public void no_differences() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump");
-    SonarRunner build = SonarRunner.create(projectDir)
-      .setProjectKey("project")
-      .setProjectName("project")
-      .setProjectVersion("1")
-      .setSourceDirs("src")
-      .setProfile("profile")
-      .setProperties("dump.old", new File(projectDir, "dumps/no_differences/").toString(), "dump.new", output.toString())
-      .setProperty("sonar.cpd.skip", "true")
-      .setProperty("sonar.dynamicAnalysis", "false");
+    SonarRunner build = createSonarRunner("dumps/no_differences/");
+
     orchestrator.executeBuild(build);
 
     assertThat(output).doesNotExist();
@@ -107,16 +86,8 @@ public class IssuesCheckerIT {
 
   @Test
   public void rule_removed() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump");
-    SonarRunner build = SonarRunner.create(projectDir)
-      .setProjectKey("project")
-      .setProjectName("project")
-      .setProjectVersion("1")
-      .setSourceDirs("src")
-      .setProfile("profile")
-      .setProperties("dump.old", new File(projectDir, "dumps/rule_removed/").toString(), "dump.new", output.toString())
-      .setProperty("sonar.cpd.skip", "true")
-      .setProperty("sonar.dynamicAnalysis", "false");
+    SonarRunner build = createSonarRunner("dumps/rule_removed/");
+
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
     assertThat(buildResult.getStatus()).isNotEqualTo(0);
@@ -129,35 +100,19 @@ public class IssuesCheckerIT {
 
   @Test
   public void missing_issue_on_file() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump");
-    SonarRunner build = SonarRunner.create(projectDir)
-      .setProjectKey("project")
-      .setProjectName("project")
-      .setProjectVersion("1")
-      .setSourceDirs("src")
-      .setProfile("profile")
-      .setProperties("dump.old", new File(projectDir, "dumps/missing_issue_on_file/").toString(), "dump.new", output.toString())
-      .setProperty("sonar.cpd.skip", "true")
-      .setProperty("sonar.dynamicAnalysis", "false");
+    SonarRunner build = createSonarRunner("dumps/missing_issue_on_file/");
+
     orchestrator.executeBuild(build);
 
     assertThat(output).exists();
 
-    assertThat(violation("BLOCKER").line()).isNull();
+    assertThat(issue("BLOCKER").line()).isNull();
   }
 
   @Test
   public void missing_file() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump");
-    SonarRunner build = SonarRunner.create(projectDir)
-      .setProjectKey("project")
-      .setProjectName("project")
-      .setProjectVersion("1")
-      .setSourceDirs("src")
-      .setProfile("profile")
-      .setProperties("dump.old", new File(projectDir, "dumps/missing_file/").toString(), "dump.new", output.toString())
-      .setProperty("sonar.cpd.skip", "true")
-      .setProperty("sonar.dynamicAnalysis", "false");
+    SonarRunner build = createSonarRunner("dumps/missing_file/");
+
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
     assertThat(buildResult.getStatus()).isNotEqualTo(0);
@@ -170,33 +125,38 @@ public class IssuesCheckerIT {
 
   @Test
   public void profile_incorrect() throws Exception {
-    File output = new File(temporaryFolder.newFolder(), "dump");
-    SonarRunner build = SonarRunner.create(projectDir)
-      .setProjectKey("project")
-      .setProjectName("project")
-      .setProjectVersion("1")
-      .setSourceDirs("src")
-      .setProfile("profile_incorrect")
-      .setProperties("dump.old", new File(projectDir, "dumps/differences/").toString(), "dump.new", output.toString())
-      .setProperty("sonar.cpd.skip", "true")
-      .setProperty("sonar.dynamicAnalysis", "false");
+    SonarRunner build = createSonarRunner("dumps/differences/");
+    build.setProfile("profile_incorrect");
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
     assertThat(buildResult.getStatus()).isNotEqualTo(0);
     assertThat(buildResult.getLogs()).contains("Rule 'squid:S00103' must be declared with severity INFO");
   }
 
-  private Issue violation(String severity) {
-    List<Issue> violations = violations(severity);
+  private SonarRunner createSonarRunner(String dumpOld) throws IOException {
+    return SonarRunner.create(projectDir)
+      .setProjectKey("project")
+      .setProjectName("project")
+      .setProjectVersion("1")
+      .setSourceDirs("src")
+      .setProfile("profile")
+      .setProperty("dump.old", new File(projectDir, dumpOld).toString())
+      .setProperty("dump.new", output.toString())
+      .setProperty("lits.differences", temporaryFolder.newFile("differences").getAbsolutePath())
+      .setProperty("sonar.cpd.skip", "true");
+  }
+
+  private static Issue issue(String severity) {
+    List<Issue> violations = issues(severity);
     assertThat(violations.size()).isEqualTo(1);
     return violations.get(0);
   }
 
-  private List<Issue> violations(String severity) {
+  private static List<Issue> issues(String severity) {
     return orchestrator.getServer().wsClient().issueClient().find(IssueQuery.create().severities(severity)).list();
   }
 
-  private Resource project() {
+  private static Resource project() {
     return orchestrator.getServer().getWsClient().find(ResourceQuery.createForMetrics("project", "violations"));
   }
 
