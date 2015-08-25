@@ -76,7 +76,7 @@ public class IssuesChecker implements IssueFilter {
   public IssuesChecker(Settings settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
-    differencesFile = settings.hasKey(LITSPlugin.DIFFERENCES_PROPERTY) ? getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY) : null;
+    differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY);
     for (ActiveRule activeRule : profile.getActiveRules()) {
       if (!activeRule.getSeverity().toString().equals(Severity.INFO)) {
         throw MessageException.of("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity INFO");
@@ -168,14 +168,12 @@ public class IssuesChecker implements IssueFilter {
       messages.add(message);
       exception = MessageException.of(message);
     }
-    if (differencesFile != null) {
-      forceDelete(differencesFile);
-      try {
-        differencesFile.createNewFile();
-        Files.write(differencesFile.toPath(), Joiner.on("\n").join(messages).getBytes(StandardCharsets.UTF_8));
-      } catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
+    forceDelete(differencesFile);
+    try {
+      differencesFile.createNewFile();
+      Files.write(differencesFile.toPath(), Joiner.on("\n").join(messages).getBytes(StandardCharsets.UTF_8));
+    } catch (IOException e) {
+      throw Throwables.propagate(e);
     }
     if (exception != null) {
       throw exception;

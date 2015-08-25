@@ -82,6 +82,15 @@ public class IssuesCheckerTest {
   }
 
   @Test
+  public void differences_file_must_be_specified() {
+    Settings settings = newCorrectSettings();
+    settings.removeProperty(LITSPlugin.DIFFERENCES_PROPERTY);
+    thrown.expect(MessageException.class);
+    thrown.expectMessage("Missing property 'lits.differences'");
+    new IssuesChecker(settings, profile);
+  }
+
+  @Test
   public void should_fail_when_incorrect_severity() {
     Settings settings = newCorrectSettings();
     ActiveRule activeRule = new ActiveRule(profile, Rule.create("repositoryKey", "ruleKey"), RulePriority.BLOCKER);
