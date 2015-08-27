@@ -9,7 +9,7 @@
 
   <groupId>org.sonarsource.sonar-lits-plugin</groupId>
   <artifactId>sonar-lits-plugin</artifactId>
-  <version>0.5-SNAPSHOT</version>
+  <version>0.5</version>
   <packaging>sonar-plugin</packaging>
 
   <name>Sonar LITS Plugin</name>
@@ -32,7 +32,7 @@
     <connection>scm:git:git@github.com:SonarSource/sonar-lits.git</connection>
     <developerConnection>scm:git:git@github.com:SonarSource/sonar-lits.git</developerConnection>
     <url>https://github.com/SonarSource/sonar-lits</url>
-    <tag>HEAD</tag>
+    <tag>0.5</tag>
   </scm>
   <issueManagement>
     <system>jira</system>
