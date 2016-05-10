@@ -47,7 +47,7 @@ public class LitsTest {
   @ClassRule
   public static Orchestrator orchestrator = Orchestrator.builderEnv()
     .addPlugin("java")
-    .addPlugin(FileLocation.of("../../target/sonar-lits-plugin.jar"))
+    .addPlugin(FileLocation.byWildcardMavenFilename(new File("../../sonar-lits-plugin/target"), "sonar-lits-plugin-*.jar"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile.xml"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile_incorrect.xml"))
     .build();

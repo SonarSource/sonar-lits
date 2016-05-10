@@ -8,12 +8,11 @@
   </parent>
 
   <groupId>org.sonarsource.sonar-lits-plugin</groupId>
-  <artifactId>sonar-lits-plugin</artifactId>
+  <artifactId>lits</artifactId>
   <version>0.6-SNAPSHOT</version>
-  <packaging>sonar-plugin</packaging>
+  <packaging>pom</packaging>
 
-  <name>Sonar LITS Plugin</name>
-  <description>Language Integration Tests Support</description>
+  <name>Sonar LITS</name>
   <url>https://github.com/SonarSource/sonar-lits</url>
   <inceptionYear>2013</inceptionYear>
   <organization>
@@ -40,82 +39,21 @@
   </issueManagement>
 
   <properties>
-    <sonar.pluginName>LITS</sonar.pluginName>
-    <sonar.pluginClass>com.sonarsource.lits.LITSPlugin</sonar.pluginClass>
-
-    <sonar.version>4.5.2</sonar.version>
-    <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
+    <!-- used for deployment to SonarSource Artifactory -->
+    <gitRepositoryName>sonar-lits</gitRepositoryName>
   </properties>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.codehaus.sonar</groupId>
-      <artifactId>sonar-plugin-api</artifactId>
-      <version>${sonar.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.2</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>net.minidev</groupId>
-      <artifactId>json-smart</artifactId>
-      <version>1.1.1</version>
-    </dependency>
+  <modules>
+    <module>sonar-lits-plugin</module>
+  </modules>
 
-    <!-- unit tests -->
-    <dependency>
-      <groupId>org.codehaus.sonar</groupId>
-      <artifactId>sonar-testing-harness</artifactId>
-      <version>${sonar.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.easytesting</groupId>
-      <artifactId>fest-assert</artifactId>
-      <version>1.4</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <finalName>${project.artifactId}</finalName>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>enforce-plugin-size</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <phase>verify</phase>
-            <configuration>
-              <rules>
-                <requireFilesSize>
-                  <!-- Do not forget to check correctness of those numbers, when obfuscation disabled -->
-                  <maxsize>70000</maxsize>
-                  <minsize>60000</minsize>
-                  <files>
-                    <file>${project.build.directory}/${project.build.finalName}.jar</file>
-                  </files>
-                </requireFilesSize>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
+  <profiles>
+    <profile>
+      <id>its</id>
+      <modules>
+        <module>its/plugin</module>
+      </modules>
+    </profile>
+  </profiles>
 
 </project>

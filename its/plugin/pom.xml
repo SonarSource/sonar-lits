@@ -3,21 +3,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.sonarsource.parent</groupId>
-    <artifactId>parent</artifactId>
-    <version>32</version>
+    <groupId>org.sonarsource.sonar-lits-plugin</groupId>
+    <artifactId>lits</artifactId>
+    <version>0.6-SNAPSHOT</version>
+    <relativePath>../../</relativePath>
   </parent>
 
-  <groupId>com.sonarsource.it</groupId>
   <artifactId>it-lits-plugin</artifactId>
-  <version>1.0-SNAPSHOT</version>
 
   <name>SonarSource :: LITS :: ITs :: Plugin</name>
-  <inceptionYear>2013</inceptionYear>
-  <organization>
-    <name>SonarSource</name>
-    <url>http://www.sonarsource.com</url>
-  </organization>
   <properties>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
   </properties>
@@ -56,5 +50,49 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <profiles>
+    <profile>
+      <id>qa</id>
+      <activation>
+        <property>
+          <name>env.SONARSOURCE_QA</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>2.10</version>
+            <executions>
+              <execution>
+                <id>copy-plugin</id>
+                <phase>generate-test-resources</phase>
+                <goals>
+                  <goal>copy</goal>
+                </goals>
+                <configuration>
+                  <artifactItems>
+                    <artifactItem>
+                      <groupId>${project.groupId}</groupId>
+                      <artifactId>sonar-lits-plugin</artifactId>
+                      <version>${project.version}</version>
+                      <type>sonar-plugin</type>
+                      <overWrite>true</overWrite>
+                    </artifactItem>
+                  </artifactItems>
+                  <outputDirectory>../../sonar-lits-plugin/target</outputDirectory>
+                  <overWriteReleases>true</overWriteReleases>
+                  <overWriteSnapshots>true</overWriteSnapshots>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
