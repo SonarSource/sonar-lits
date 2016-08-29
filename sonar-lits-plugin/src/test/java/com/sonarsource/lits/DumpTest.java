@@ -53,10 +53,11 @@ public class DumpTest {
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey1", 1));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 2));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 1));
+    issues.add(new IssueKey("componentKey1", "repoKey:rule-key3", 1));
 
     Dump.save(issues, dir);
 
-    assertThat(dir.listFiles()).hasSize(2);
+    assertThat(dir.listFiles()).hasSize(3);
     String expected = new StringBuilder()
       .append("{\n")
       .append("'componentKey1':[\n")
@@ -77,12 +78,20 @@ public class DumpTest {
       .append("}\n")
       .toString();
     assertThat(Files.toString(new File(dir, "repoKey-ruleKey2.json"), Charsets.UTF_8)).isEqualTo(expected);
+    expected = new StringBuilder()
+      .append("{\n")
+      .append("'componentKey1':[\n")
+      .append("1,\n")
+      .append("],\n")
+      .append("}\n")
+      .toString();
+    assertThat(Files.toString(new File(dir, "repoKey-rule-key3.json"), Charsets.UTF_8)).isEqualTo(expected);
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
     System.out.println(dump);
 
     assertThat(dump.size()).isEqualTo(2);
-    assertThat(dump.get("componentKey1").size()).isEqualTo(3);
+    assertThat(dump.get("componentKey1").size()).isEqualTo(4);
     assertThat(dump.get("componentKey2").size()).isEqualTo(1);
   }
 

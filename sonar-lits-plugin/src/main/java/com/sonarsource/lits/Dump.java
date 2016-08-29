@@ -128,7 +128,7 @@ public class Dump {
   }
 
   private static String ruleKeyFromFileName(String fileName) {
-    return fileName.replace('-', ':').substring(0, fileName.length() - EXT.length() - 1);
+    return fileName.replaceFirst("-", ":").substring(0, fileName.length() - EXT.length() - 1);
   }
 
   private static void startComponent(PrintStream out, String componentKey) {
