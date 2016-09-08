@@ -23,14 +23,13 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-import org.sonar.api.batch.DecoratorContext;
 import org.sonar.api.config.Settings;
-import org.sonar.api.issue.Issue;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
 import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.RulePriority;
+import org.sonar.api.scan.issue.filter.FilterableIssue;
 import org.sonar.api.utils.MessageException;
 
 import java.io.File;
@@ -39,7 +38,6 @@ import java.util.Arrays;
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 public class IssuesCheckerTest {
@@ -51,7 +49,6 @@ public class IssuesCheckerTest {
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private RulesProfile profile = mock(RulesProfile.class);
-  private DecoratorContext decoratorContext = mock(DecoratorContext.class);
   private IssuesChecker checker;
   private File output;
   private File assertion;
@@ -106,13 +103,12 @@ public class IssuesCheckerTest {
   public void should_not_save_when_no_differences() {
     checker.save();
 
-    verifyZeroInteractions(decoratorContext);
     assertThat(output).doesNotExist();
   }
 
   @Test
   public void should_save_when_differences() {
-    Issue issue = mock(Issue.class);
+    FilterableIssue issue = mock(FilterableIssue.class);
     when(issue.componentKey()).thenReturn("");
     when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
 
@@ -124,7 +120,7 @@ public class IssuesCheckerTest {
 
   @Test
   public void should_not_save_when_disabled() {
-    Issue issue = mock(Issue.class);
+    FilterableIssue issue = mock(FilterableIssue.class);
     when(issue.componentKey()).thenReturn("");
     when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
 
@@ -137,7 +133,7 @@ public class IssuesCheckerTest {
 
   @Test
   public void should_hide_old_issues() {
-    Issue issue = mock(Issue.class);
+    FilterableIssue issue = mock(FilterableIssue.class);
     when(issue.componentKey()).thenReturn("project:src/Example.java");
     when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
     when(issue.line()).thenReturn(1);

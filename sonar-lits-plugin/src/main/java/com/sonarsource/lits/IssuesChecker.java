@@ -31,12 +31,12 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.config.Settings;
-import org.sonar.api.issue.Issue;
-import org.sonar.api.issue.batch.IssueFilter;
-import org.sonar.api.issue.batch.IssueFilterChain;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
+import org.sonar.api.scan.issue.filter.FilterableIssue;
+import org.sonar.api.scan.issue.filter.IssueFilter;
+import org.sonar.api.scan.issue.filter.IssueFilterChain;
 import org.sonar.api.utils.MessageException;
 
 import java.io.File;
@@ -106,7 +106,7 @@ public class IssuesChecker implements IssueFilter {
   }
 
   @Override
-  public boolean accept(Issue issue, IssueFilterChain chain) {
+  public boolean accept(FilterableIssue issue, IssueFilterChain chain) {
     if (disabled) {
       return true;
     }

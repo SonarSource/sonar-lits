@@ -20,6 +20,8 @@
 package com.sonarsource.lits;
 
 import org.junit.Test;
+import org.sonar.api.Plugin;
+import org.sonar.api.utils.Version;
 
 import static org.fest.assertions.Assertions.assertThat;
 
@@ -27,7 +29,9 @@ public class LITSPluginTest {
 
   @Test
   public void test() {
-    assertThat(new LITSPlugin().getExtensions()).containsOnly(IssuesChecker.class, DumpPhase.class);
+    Plugin.Context context = new Plugin.Context(Version.parse("5.6"));
+    new LITSPlugin().define(context);
+    assertThat(context.getExtensions()).containsOnly(IssuesChecker.class, DumpPhase.class);
   }
 
 }

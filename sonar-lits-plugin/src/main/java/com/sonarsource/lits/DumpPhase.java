@@ -22,18 +22,18 @@ package com.sonarsource.lits;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Multiset;
 import org.sonar.api.batch.Phase;
-import org.sonar.api.batch.Sensor;
-import org.sonar.api.batch.SensorContext;
 import org.sonar.api.batch.fs.FileSystem;
+import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.InputDir;
 import org.sonar.api.batch.fs.InputFile;
-import org.sonar.api.component.ResourcePerspectives;
-import org.sonar.api.issue.Issuable;
+import org.sonar.api.batch.rule.Severity;
+import org.sonar.api.batch.sensor.Sensor;
+import org.sonar.api.batch.sensor.SensorContext;
+import org.sonar.api.batch.sensor.SensorDescriptor;
+import org.sonar.api.batch.sensor.issue.NewIssue;
+import org.sonar.api.batch.sensor.issue.NewIssueLocation;
 import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.resources.Project;
-import org.sonar.api.resources.Resource;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
 
 import java.util.HashSet;
@@ -45,48 +45,39 @@ public class DumpPhase implements Sensor {
 
   private final IssuesChecker checker;
   private final RulesProfile profile;
-  private final ResourcePerspectives resourcePerspectives;
-  private final FileSystem fs;
 
-  public DumpPhase(IssuesChecker checker, RulesProfile profile, ResourcePerspectives resourcePerspectives, FileSystem fs) {
+  public DumpPhase(IssuesChecker checker, RulesProfile profile) {
     this.checker = checker;
     this.profile = profile;
-    this.resourcePerspectives = resourcePerspectives;
-    this.fs = fs;
   }
 
   @Override
-  public boolean shouldExecuteOnProject(Project project) {
-    return true;
+  public void describe(SensorDescriptor descriptor) {
   }
 
   @Override
-  public void analyse(Project module, final SensorContext context) {
+  public void execute(SensorContext context) {
     // disable IssueFilter
     checker.disabled = true;
     Set<InputDir> inputDirs = new HashSet<>();
+    FileSystem fs = context.fileSystem();
     for (InputFile inputFile : fs.inputFiles(fs.predicates().all())) {
       InputDir inputDir = fs.inputDir(inputFile.file());
       if (inputDir != null && !inputDirs.contains(inputDir)) {
-        createMissingIssues(context.getResource(inputDir));
+        createMissingIssues(context, inputDir);
         inputDirs.add(inputDir);
       }
-      createMissingIssues(context.getResource(inputFile));
+      createMissingIssues(context, inputFile);
     }
     save();
   }
 
   @VisibleForTesting
-  protected void createMissingIssues(Resource resource) {
-    Issuable issuable = resourcePerspectives.as(Issuable.class, resource);
-    if (issuable == null) {
-      // not indexed
-      return;
-    }
-    Multiset<IssueKey> componentIssues = checker.getByComponentKey(resource.getEffectiveKey());
+  protected void createMissingIssues(SensorContext context, InputComponent resource) {
+    Multiset<IssueKey> componentIssues = checker.getByComponentKey(resource.key());
     if (!componentIssues.isEmpty()) {
       checker.disabled = true;
-      for (IssueKey issueKey : checker.getByComponentKey(resource.getEffectiveKey())) {
+      for (IssueKey issueKey : checker.getByComponentKey(resource.key())) {
         // missing issue => create
         checker.different = true;
         RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
@@ -97,12 +88,18 @@ public class DumpPhase implements Sensor {
           continue;
         }
         checker.differences++;
-        issuable.addIssue(issuable.newIssueBuilder()
-          .ruleKey(ruleKey)
-          .severity(Severity.BLOCKER)
-          .line(issueKey.line == 0 ? null : issueKey.line)
-          .message("Missing")
-          .build());
+        NewIssue newIssue = context.newIssue();
+        NewIssueLocation location = newIssue.newLocation()
+          .on(resource)
+          .message("Missing");
+        if (issueKey.line != 0) {
+          location.at(((InputFile) resource).selectLine(issueKey.line));
+        }
+        newIssue
+          .forRule(ruleKey)
+          .overrideSeverity(Severity.BLOCKER)
+          .at(location)
+          .save();
       }
       checker.disabled = false;
       componentIssues.clear();

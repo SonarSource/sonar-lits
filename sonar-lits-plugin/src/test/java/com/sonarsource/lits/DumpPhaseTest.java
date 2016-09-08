@@ -20,36 +20,27 @@
 package com.sonarsource.lits;
 
 import com.google.common.collect.HashMultiset;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-import org.sonar.api.batch.SensorContext;
-import org.sonar.api.batch.fs.FilePredicate;
-import org.sonar.api.batch.fs.FilePredicates;
-import org.sonar.api.batch.fs.FileSystem;
-import org.sonar.api.batch.fs.InputDir;
-import org.sonar.api.batch.fs.InputFile;
-import org.sonar.api.batch.fs.InputPath;
-import org.sonar.api.component.ResourcePerspectives;
-import org.sonar.api.issue.Issuable;
-import org.sonar.api.issue.Issue;
+import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.fs.internal.DefaultInputFile;
+import org.sonar.api.batch.fs.internal.FileMetadata;
+import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.resources.Project;
-import org.sonar.api.resources.Resource;
-import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Map;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -57,24 +48,26 @@ public class DumpPhaseTest {
 
   private IssuesChecker checker;
   private RulesProfile rulesProfile;
-  private ResourcePerspectives resourcePerspectives;
   private DumpPhase decorator;
-  private FileSystem fs;
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  private SensorContextTester sensorContext;
 
   @Before
-  public void setup() {
+  public void setup() throws IOException {
     checker = mock(IssuesChecker.class);
     rulesProfile = mock(RulesProfile.class);
-    resourcePerspectives = mock(ResourcePerspectives.class);
-    fs = mock(FileSystem.class);
-    FilePredicates filePredicates = mock(FilePredicates.class);
-    when(fs.predicates()).thenReturn(filePredicates);
-    decorator = new DumpPhase(checker, rulesProfile, resourcePerspectives, fs);
-  }
+    decorator = new DumpPhase(checker, rulesProfile);
 
-  @Test
-  public void should_execute_on_any_project() {
-    assertThat(decorator.shouldExecuteOnProject(null)).isTrue();
+    sensorContext = SensorContextTester.create(new File("src/test/resources"));
+    sensorContext.fileSystem().setWorkDir(temporaryFolder.newFolder());
+    sensorContext.fileSystem().add(
+      new DefaultInputFile("", "example.cpp")
+        .setLanguage("cpp")
+        .initMetadata(new FileMetadata().readMetadata(new FileReader("src/test/resources/example.cpp")))
+    );
   }
 
   @Test
@@ -88,8 +81,6 @@ public class DumpPhaseTest {
 
   @Test
   public void should_report_missing_issues() {
-    Project project = new Project("project", null, "project");
-
     Multiset<IssueKey> issues = HashMultiset.create();
     issues.add(new IssueKey("", "squid:S00103", null));
     issues.add(new IssueKey("", "squid:S00104", null));
@@ -98,23 +89,9 @@ public class DumpPhaseTest {
     ActiveRule activeRule = mock(ActiveRule.class);
     when(rulesProfile.getActiveRule("squid", "S00103")).thenReturn(activeRule);
 
-    Issuable.IssueBuilder issueBuilder = mockIssueBuilder();
-    Issuable issuable = mock(Issuable.class);
-    when(issuable.newIssueBuilder()).thenReturn(issueBuilder);
-    when(resourcePerspectives.as(eq(Issuable.class), any(Resource.class))).thenReturn(issuable, null);
+    decorator.execute(sensorContext);
 
-    SensorContext sensorContext = mock(SensorContext.class);
-    Resource resource = mock(Resource.class);
-    when(sensorContext.getResource(any(InputPath.class))).thenReturn(resource);
-
-    InputFile inputFile = mock(InputFile.class);
-    InputFile inputFile2 = mock(InputFile.class);
-    InputDir inputDir = mock(InputDir.class);
-    when(fs.inputDir(inputFile.file())).thenReturn(inputDir);
-    when(fs.inputFiles(any(FilePredicate.class))).thenReturn(ImmutableList.of(inputFile, inputFile2));
-    decorator.analyse(project, sensorContext);
-
-    verify(issuable, times(1)).addIssue(any(Issue.class));
+    assertThat(sensorContext.allIssues()).hasSize(1);
   }
 
   @Test
@@ -129,15 +106,6 @@ public class DumpPhaseTest {
     decorator.save();
 
     verify(checker).missingResource("missing");
-  }
-
-  private Issuable.IssueBuilder mockIssueBuilder() {
-    Issuable.IssueBuilder issueBuilder = mock(Issuable.IssueBuilder.class);
-    when(issueBuilder.ruleKey(any(RuleKey.class))).thenReturn(issueBuilder);
-    when(issueBuilder.severity(any(String.class))).thenReturn(issueBuilder);
-    when(issueBuilder.line(any(Integer.class))).thenReturn(issueBuilder);
-    when(issueBuilder.message(any(String.class))).thenReturn(issueBuilder);
-    return issueBuilder;
   }
 
 }

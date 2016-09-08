@@ -19,20 +19,17 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.collect.ImmutableList;
-import org.sonar.api.SonarPlugin;
+import org.sonar.api.Plugin;
 
-import java.util.List;
-
-public class LITSPlugin extends SonarPlugin {
+public class LITSPlugin implements Plugin {
 
   public static final String OLD_DUMP_PROPERTY = "dump.old";
   public static final String NEW_DUMP_PROPERTY = "dump.new";
   public static final String DIFFERENCES_PROPERTY = "lits.differences";
 
   @Override
-  public List getExtensions() {
-    return ImmutableList.of(IssuesChecker.class, DumpPhase.class);
+  public void define(Context context) {
+    context.addExtensions(IssuesChecker.class, DumpPhase.class);
   }
 
 }

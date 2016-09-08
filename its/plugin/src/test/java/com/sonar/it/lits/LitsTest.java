@@ -21,7 +21,7 @@ package com.sonar.it.lits;
 
 import com.sonar.orchestrator.Orchestrator;
 import com.sonar.orchestrator.build.BuildResult;
-import com.sonar.orchestrator.build.SonarRunner;
+import com.sonar.orchestrator.build.SonarScanner;
 import com.sonar.orchestrator.locator.FileLocation;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -47,7 +47,7 @@ public class LitsTest {
   @ClassRule
   public static Orchestrator orchestrator = Orchestrator.builderEnv()
     .addPlugin("java")
-    .addPlugin(FileLocation.byWildcardMavenFilename(new File("../../sonar-lits-plugin/target"), "sonar-lits-plugin*.jar"))
+    .addPlugin(FileLocation.byWildcardMavenFilename(new File("../../sonar-lits-plugin/target"), "sonar-lits-plugin-*.jar"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile.xml"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile_incorrect.xml"))
     .build();
@@ -63,7 +63,7 @@ public class LitsTest {
 
   @Test
   public void differences() throws Exception {
-    SonarRunner build = createSonarRunner("dumps/differences/");
+    SonarScanner build = createSonarRunner("dumps/differences/");
     orchestrator.executeBuild(build);
 
     assertThat(output).exists();
@@ -75,7 +75,7 @@ public class LitsTest {
 
   @Test
   public void no_differences() throws Exception {
-    SonarRunner build = createSonarRunner("dumps/no_differences/");
+    SonarScanner build = createSonarRunner("dumps/no_differences/");
 
     orchestrator.executeBuild(build);
 
@@ -86,7 +86,7 @@ public class LitsTest {
 
   @Test
   public void rule_removed() throws Exception {
-    SonarRunner build = createSonarRunner("dumps/rule_removed/");
+    SonarScanner build = createSonarRunner("dumps/rule_removed/");
 
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
@@ -100,7 +100,7 @@ public class LitsTest {
 
   @Test
   public void missing_issue_on_file() throws Exception {
-    SonarRunner build = createSonarRunner("dumps/missing_issue_on_file/");
+    SonarScanner build = createSonarRunner("dumps/missing_issue_on_file/");
 
     orchestrator.executeBuild(build);
 
@@ -111,7 +111,7 @@ public class LitsTest {
 
   @Test
   public void missing_file() throws Exception {
-    SonarRunner build = createSonarRunner("dumps/missing_file/");
+    SonarScanner build = createSonarRunner("dumps/missing_file/");
 
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
@@ -125,7 +125,7 @@ public class LitsTest {
 
   @Test
   public void profile_incorrect() throws Exception {
-    SonarRunner build = createSonarRunner("dumps/differences/");
+    SonarScanner build = createSonarRunner("dumps/differences/");
     build.setProfile("profile_incorrect");
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
@@ -133,8 +133,8 @@ public class LitsTest {
     assertThat(buildResult.getLogs()).contains("Rule 'squid:S00103' must be declared with severity INFO");
   }
 
-  private SonarRunner createSonarRunner(String dumpOld) throws IOException {
-    return SonarRunner.create(projectDir)
+  private SonarScanner createSonarRunner(String dumpOld) throws IOException {
+    return SonarScanner.create(projectDir)
       .setProjectKey("project")
       .setProjectName("project")
       .setProjectVersion("1")
