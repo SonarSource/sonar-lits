@@ -40,12 +40,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+// must be public for SQ picocontainer
 @Phase(name = Phase.Name.POST)
 public class DumpPhase implements Sensor {
 
   private final IssuesChecker checker;
   private final RulesProfile profile;
 
+  // must be public for SQ picocontainer
   public DumpPhase(IssuesChecker checker, RulesProfile profile) {
     this.checker = checker;
     this.profile = profile;
@@ -53,6 +55,7 @@ public class DumpPhase implements Sensor {
 
   @Override
   public void describe(SensorDescriptor descriptor) {
+    descriptor.name("LITS");
   }
 
   @Override
@@ -73,7 +76,7 @@ public class DumpPhase implements Sensor {
   }
 
   @VisibleForTesting
-  protected void createMissingIssues(SensorContext context, InputComponent resource) {
+  private void createMissingIssues(SensorContext context, InputComponent resource) {
     Multiset<IssueKey> componentIssues = checker.getByComponentKey(resource.key());
     if (!componentIssues.isEmpty()) {
       checker.disabled = true;
@@ -107,7 +110,7 @@ public class DumpPhase implements Sensor {
   }
 
   @VisibleForTesting
-  protected void save() {
+  void save() {
     for (Map.Entry<String, Multiset<IssueKey>> entry : checker.getPrevious().entrySet()) {
       if (!entry.getValue().isEmpty()) {
         checker.different = true;

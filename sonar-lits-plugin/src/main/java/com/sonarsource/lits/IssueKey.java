@@ -25,13 +25,13 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 
 @Immutable
-public class IssueKey implements Comparable<IssueKey> {
+class IssueKey implements Comparable<IssueKey> {
 
   final String componentKey;
   final String ruleKey;
   final int line;
 
-  public IssueKey(String componentKey, String ruleKey, @Nullable Integer line) {
+  IssueKey(String componentKey, String ruleKey, @Nullable Integer line) {
     this.componentKey = componentKey;
     this.ruleKey = ruleKey;
     this.line = Objects.firstNonNull(line, 0);

@@ -19,10 +19,8 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.io.Closeables;
 import net.minidev.json.JSONArray;
@@ -37,20 +35,22 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Dump {
+class Dump {
 
   private static final String EXT = "json";
 
   private Dump() {
   }
 
-  public static Map<String, Multiset<IssueKey>> load(File dir) {
-    Map<String, Multiset<IssueKey>> result = Maps.newHashMap();
+  static Map<String, Multiset<IssueKey>> load(File dir) {
+    Map<String, Multiset<IssueKey>> result = new HashMap<>();
     for (File file : FileUtils.listFiles(dir, new String[]{EXT}, false)) {
       load(file, result);
     }
@@ -58,15 +58,14 @@ public class Dump {
   }
 
   static void load(File file, Map<String, Multiset<IssueKey>> result) {
-    InputStreamReader in = null;
     JSONObject json;
-    try {
-      in = new InputStreamReader(new FileInputStream(file), Charsets.UTF_8);
+    try (
+      FileInputStream fis = new FileInputStream(file);
+      InputStreamReader in = new InputStreamReader(fis, StandardCharsets.UTF_8)
+    ) {
       json = (JSONObject) JSONValue.parse(in);
     } catch (IOException e) {
       throw Throwables.propagate(e);
-    } finally {
-      Closeables.closeQuietly(in);
     }
 
     String ruleKey = ruleKeyFromFileName(file.getName());
@@ -86,7 +85,7 @@ public class Dump {
     }
   }
 
-  public static void save(List<IssueKey> issues, File dir) {
+  static void save(List<IssueKey> issues, File dir) {
     try {
       FileUtils.forceMkdir(dir);
     } catch (IOException e) {
@@ -104,7 +103,7 @@ public class Dump {
           endRule(out);
         }
         try {
-          out = new PrintStream(new FileOutputStream(new File(dir, ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, Charsets.UTF_8.name());
+          out = new PrintStream(new FileOutputStream(new File(dir, ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
         } catch (IOException e) {
           throw Throwables.propagate(e);
         }

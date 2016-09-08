@@ -24,9 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
-import com.google.common.collect.Sets;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,10 +42,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+// must be public for SQ picocontainer
 public class IssuesChecker implements IssueFilter {
 
   private static final Logger LOG = LoggerFactory.getLogger(IssuesChecker.class);
@@ -64,15 +64,16 @@ public class IssuesChecker implements IssueFilter {
   /**
    * New findings.
    */
-  private final List<IssueKey> dump = Lists.newArrayList();
+  private final List<IssueKey> dump = new ArrayList<>();
 
-  private final Set<String> inactiveRules = Sets.newHashSet();
-  private final Set<String> missingResources = Sets.newHashSet();
+  private final Set<String> inactiveRules = new HashSet<>();
+  private final Set<String> missingResources = new HashSet<>();
 
   boolean different = false;
   boolean disabled = false;
   int differences = 0;
 
+  // must be public for SQ picocontainer
   public IssuesChecker(Settings settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
@@ -127,12 +128,12 @@ public class IssuesChecker implements IssueFilter {
     }
   }
 
-  public void inactiveRule(String ruleKey) {
+  void inactiveRule(String ruleKey) {
     different = true;
     inactiveRules.add(ruleKey);
   }
 
-  public void missingResource(String componentKey) {
+  void missingResource(String componentKey) {
     different = true;
     missingResources.add(componentKey);
   }

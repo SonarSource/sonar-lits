@@ -23,9 +23,9 @@ import org.sonar.api.Plugin;
 
 public class LITSPlugin implements Plugin {
 
-  public static final String OLD_DUMP_PROPERTY = "dump.old";
-  public static final String NEW_DUMP_PROPERTY = "dump.new";
-  public static final String DIFFERENCES_PROPERTY = "lits.differences";
+  static final String OLD_DUMP_PROPERTY = "dump.old";
+  static final String NEW_DUMP_PROPERTY = "dump.new";
+  static final String DIFFERENCES_PROPERTY = "lits.differences";
 
   @Override
   public void define(Context context) {

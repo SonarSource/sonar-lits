@@ -19,9 +19,6 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.io.Files;
 import org.junit.Rule;
@@ -31,7 +28,10 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.lang.reflect.Constructor;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +48,7 @@ public class DumpTest {
   @Test
   public void save_load() throws Exception {
     File dir = new File(temporaryFolder.newFolder(), "dump");
-    List<IssueKey> issues = Lists.newArrayList();
+    List<IssueKey> issues = new ArrayList<>();
     issues.add(new IssueKey("componentKey2", "repoKey:ruleKey1", 1));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey1", 1));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 2));
@@ -68,7 +68,7 @@ public class DumpTest {
       .append("],\n")
       .append("}\n")
       .toString();
-    assertThat(Files.toString(new File(dir, "repoKey-ruleKey1.json"), Charsets.UTF_8)).isEqualTo(expected);
+    assertThat(Files.toString(new File(dir, "repoKey-ruleKey1.json"), StandardCharsets.UTF_8)).isEqualTo(expected);
     expected = new StringBuilder()
       .append("{\n")
       .append("'componentKey1':[\n")
@@ -77,7 +77,7 @@ public class DumpTest {
       .append("],\n")
       .append("}\n")
       .toString();
-    assertThat(Files.toString(new File(dir, "repoKey-ruleKey2.json"), Charsets.UTF_8)).isEqualTo(expected);
+    assertThat(Files.toString(new File(dir, "repoKey-ruleKey2.json"), StandardCharsets.UTF_8)).isEqualTo(expected);
     expected = new StringBuilder()
       .append("{\n")
       .append("'componentKey1':[\n")
@@ -85,7 +85,7 @@ public class DumpTest {
       .append("],\n")
       .append("}\n")
       .toString();
-    assertThat(Files.toString(new File(dir, "repoKey-rule-key3.json"), Charsets.UTF_8)).isEqualTo(expected);
+    assertThat(Files.toString(new File(dir, "repoKey-rule-key3.json"), StandardCharsets.UTF_8)).isEqualTo(expected);
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
     System.out.println(dump);
@@ -98,13 +98,13 @@ public class DumpTest {
   @Test
   public void unable_to_load() throws Exception {
     thrown.expect(RuntimeException.class);
-    Dump.load(temporaryFolder.newFolder(), Maps.<String, Multiset<IssueKey>>newHashMap());
+    Dump.load(temporaryFolder.newFolder(), new HashMap<>());
   }
 
   @Test
   public void unable_to_save() throws Exception {
     thrown.expect(RuntimeException.class);
-    Dump.save(Collections.<IssueKey>emptyList(), temporaryFolder.newFile());
+    Dump.save(Collections.emptyList(), temporaryFolder.newFile());
   }
 
   @Test

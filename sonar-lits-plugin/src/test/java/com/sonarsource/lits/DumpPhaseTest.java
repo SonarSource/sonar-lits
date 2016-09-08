@@ -21,7 +21,6 @@ package com.sonarsource.lits;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import org.junit.Before;
 import org.junit.Rule;
@@ -29,6 +28,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.batch.fs.internal.FileMetadata;
+import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rules.ActiveRule;
@@ -36,6 +36,7 @@ import org.sonar.api.rules.ActiveRule;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.fest.assertions.Assertions.assertThat;
@@ -71,6 +72,13 @@ public class DumpPhaseTest {
   }
 
   @Test
+  public void test_describe() {
+    DefaultSensorDescriptor descriptor = new DefaultSensorDescriptor();
+    decorator.describe(descriptor);
+    assertThat(descriptor.name()).isEqualTo("LITS");
+  }
+
+  @Test
   public void should_save_on_project() {
     when(checker.getByComponentKey(anyString())).thenReturn(HashMultiset.<IssueKey>create());
 
@@ -96,7 +104,7 @@ public class DumpPhaseTest {
 
   @Test
   public void should_report_missing_files() {
-    Map<String, Multiset<IssueKey>> previous = Maps.newHashMap();
+    Map<String, Multiset<IssueKey>> previous = new HashMap<>();
     Multiset<IssueKey> issues = HashMultiset.create();
     issues.add(new IssueKey("", "squid:S00103", null));
     previous.put("missing", issues);
