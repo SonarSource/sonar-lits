@@ -41,6 +41,8 @@
   <properties>
     <!-- used for deployment to SonarSource Artifactory -->
     <gitRepositoryName>sonar-lits</gitRepositoryName>
+    <!-- Release: enable publication to Bintray -->
+    <artifactsToPublish>${project.groupId}:sonar-lits-plugin:jar</artifactsToPublish>
   </properties>
 
   <modules>
