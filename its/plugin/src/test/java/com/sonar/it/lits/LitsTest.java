@@ -30,11 +30,16 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.wsclient.issue.Issue;
 import org.sonar.wsclient.issue.IssueQuery;
-import org.sonar.wsclient.services.Resource;
-import org.sonar.wsclient.services.ResourceQuery;
+import org.sonarqube.ws.WsMeasures;
+import org.sonarqube.ws.client.HttpConnector;
+import org.sonarqube.ws.client.WsClient;
+import org.sonarqube.ws.client.WsClientFactories;
+import org.sonarqube.ws.client.measure.ComponentWsRequest;
 
+import javax.annotation.CheckForNull;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 import static org.fest.assertions.Assertions.assertThat;
@@ -68,7 +73,7 @@ public class LitsTest {
 
     assertThat(output).exists();
 
-    assertThat(project().getMeasure("violations").getValue()).isEqualTo(2);
+    assertThat(getIssuesMeasure()).isEqualTo(2);
     assertThat(issue("BLOCKER").line()).isEqualTo(3);
     assertThat(issue("INFO").line()).isEqualTo(2);
   }
@@ -81,7 +86,7 @@ public class LitsTest {
 
     assertThat(output).doesNotExist();
 
-    assertThat(project().getMeasure("violations").getValue()).isEqualTo(0);
+    assertThat(getIssuesMeasure()).isEqualTo(0);
   }
 
   @Test
@@ -94,8 +99,6 @@ public class LitsTest {
     assertThat(buildResult.getLogs()).contains("Inactive rules: squid:not_in_profile");
 
     assertThat(output).exists();
-
-    assertThat(project()).isNull();
   }
 
   @Test
@@ -119,8 +122,6 @@ public class LitsTest {
     assertThat(buildResult.getLogs()).contains("Missing resources: project:src/Missing.java");
 
     assertThat(output).exists();
-
-    assertThat(project()).isNull();
   }
 
   @Test
@@ -156,8 +157,29 @@ public class LitsTest {
     return orchestrator.getServer().wsClient().issueClient().find(IssueQuery.create().severities(severity)).list();
   }
 
-  private static Resource project() {
-    return orchestrator.getServer().getWsClient().find(ResourceQuery.createForMetrics("project", "violations"));
+  private static Integer getIssuesMeasure() {
+    return getMeasureAsInt("project", "violations");
+  }
+
+  @CheckForNull
+  static Integer getMeasureAsInt(String componentKey, String metricKey) {
+    WsMeasures.Measure measure = getMeasure(componentKey, metricKey);
+    return (measure == null) ? null : Integer.parseInt(measure.getValue());
+  }
+
+  @CheckForNull
+  static WsMeasures.Measure getMeasure(String componentKey, String metricKey) {
+    WsMeasures.ComponentWsResponse response = newWsClient().measures().component(new ComponentWsRequest()
+      .setComponentKey(componentKey)
+      .setMetricKeys(Collections.singletonList(metricKey)));
+    List<WsMeasures.Measure> measures = response.getComponent().getMeasuresList();
+    return measures.size() == 1 ? measures.get(0) : null;
+  }
+
+  static WsClient newWsClient() {
+    return WsClientFactories.getDefault().newClient(HttpConnector.newBuilder()
+      .url(orchestrator.getServer().getUrl())
+      .build());
   }
 
 }
