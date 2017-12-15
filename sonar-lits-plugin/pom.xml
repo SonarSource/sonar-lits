@@ -49,6 +49,18 @@
       <artifactId>json-smart</artifactId>
       <version>1.1.1</version>
     </dependency>
+    <!-- For HTML Report -->
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.freemarker</groupId>
+      <artifactId>freemarker</artifactId>
+      <version>2.3.20</version>
+    </dependency>
+
 
     <!-- unit tests -->
     <dependency>
@@ -118,8 +130,8 @@
             <configuration>
               <rules>
                 <requireFilesSize>
-                  <maxsize>900000</maxsize>
-                  <minsize>800000</minsize>
+                  <maxsize>1900000</maxsize>
+                  <minsize>1800000</minsize>
                   <files>
                     <file>${project.build.directory}/${project.build.finalName}.jar</file>
                   </files>
