@@ -86,9 +86,9 @@ public class DumpPhaseTest {
   public void should_save_on_project() {
     when(checker.getByComponentKey(anyString())).thenReturn(HashMultiset.create());
 
-    decorator.save();
+    decorator.save(sensorContext.fileSystem());
 
-    verify(checker).save();
+    verify(checker).save(sensorContext.fileSystem());
   }
 
   @Test
@@ -115,7 +115,7 @@ public class DumpPhaseTest {
     when(checker.getPrevious()).thenReturn(previous);
     when(checker.getByComponentKey(anyString())).thenReturn(ImmutableMultiset.<IssueKey>of());
 
-    decorator.save();
+    decorator.save(sensorContext.fileSystem());
 
     verify(checker).missingResource("missing");
   }

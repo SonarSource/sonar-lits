@@ -56,6 +56,8 @@ public class IssuesCheckerTest {
   private IssuesChecker checker;
   private File output;
   private File assertion;
+  private DefaultFileSystem fileSystem;
+  private File workDir;
 
   @Before
   public void setup() throws Exception {
@@ -63,8 +65,9 @@ public class IssuesCheckerTest {
     assertion = new File(temporaryFolder.newFolder(), "assertion");
     File moduleBaseDir = temporaryFolder.newFolder();
     SensorContextTester sensorContextTester = SensorContextTester.create(moduleBaseDir);
-    DefaultFileSystem fileSystem = sensorContextTester.fileSystem();
-    fileSystem.setWorkDir(new File(temporaryFolder.newFolder(), ".sonar").toPath());
+    fileSystem = sensorContextTester.fileSystem();
+    workDir = new File(temporaryFolder.newFolder(), ".sonar");
+    fileSystem.setWorkDir(workDir.toPath());
 
     DefaultInputFile defaultInputFile = new TestInputFileBuilder("moduleKey", "relative/path/file.cpp")
       .setModuleBaseDir(moduleBaseDir.toPath())
@@ -118,7 +121,7 @@ public class IssuesCheckerTest {
 
   @Test
   public void should_not_save_when_no_differences() {
-    checker.save();
+    checker.save(fileSystem);
 
     assertThat(output).doesNotExist();
   }
@@ -134,9 +137,10 @@ public class IssuesCheckerTest {
     when(issue.componentKey()).thenReturn("moduleKey:relative/path/file.cpp");
 
     assertThat(checker.accept(issue, null)).isTrue();
-    checker.save();
+    checker.save(fileSystem);
 
     assertThat(output).exists();
+    assertThat(new File(workDir, "issues-report/issues-report.html").exists()).isTrue();
   }
 
   @Test
@@ -147,7 +151,7 @@ public class IssuesCheckerTest {
 
     checker.disabled = true;
     assertThat(checker.accept(issue, null)).isTrue();
-    checker.save();
+    checker.save(fileSystem);
 
     assertThat(output).doesNotExist();
   }
@@ -167,7 +171,7 @@ public class IssuesCheckerTest {
   public void should_fail_when_inactive_rules() {
     checker.inactiveRule("squid:S00103");
     try {
-      checker.save();
+      checker.save(fileSystem);
       fail("Expected exception");
     } catch (MessageException e) {
       assertThat(e.getMessage()).isEqualTo("Inactive rules: squid:S00103");
@@ -179,7 +183,7 @@ public class IssuesCheckerTest {
   public void should_fail_when_missing_resources() {
     checker.missingResource("missing_resource");
     try {
-      checker.save();
+      checker.save(fileSystem);
       fail("Expected exception");
     } catch (MessageException e) {
       assertThat(e.getMessage()).isEqualTo("Missing resources: missing_resource");
