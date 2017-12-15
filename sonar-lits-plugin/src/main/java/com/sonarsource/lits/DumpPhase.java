@@ -21,6 +21,10 @@ package com.sonarsource.lits;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Multiset;
+import com.sonarsource.lits.LitsReport.ReportedIssue;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import org.sonar.api.batch.Phase;
 import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputComponent;
@@ -35,10 +39,6 @@ import org.sonar.api.batch.sensor.issue.NewIssueLocation;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 // must be public for SQ picocontainer
 @Phase(name = Phase.Name.POST)
@@ -72,7 +72,7 @@ public class DumpPhase implements Sensor {
       }
       createMissingIssues(context, inputFile);
     }
-    save();
+    save(context.fileSystem());
   }
 
   @VisibleForTesting
@@ -91,6 +91,7 @@ public class DumpPhase implements Sensor {
           continue;
         }
         checker.differences++;
+        checker.addDifferentIssue(new ReportedIssue(issueKey.ruleKey, issueKey.componentKey, issueKey.line, "Missing", "BLOCKER", resource));
         NewIssue newIssue = context.newIssue();
         NewIssueLocation location = newIssue.newLocation()
           .on(resource)
@@ -110,14 +111,14 @@ public class DumpPhase implements Sensor {
   }
 
   @VisibleForTesting
-  void save() {
+  void save(FileSystem fileSystem) {
     for (Map.Entry<String, Multiset<IssueKey>> entry : checker.getPrevious().entrySet()) {
       if (!entry.getValue().isEmpty()) {
         checker.different = true;
         checker.missingResource(entry.getKey());
       }
     }
-    checker.save();
+    checker.save(fileSystem);
   }
 
 }

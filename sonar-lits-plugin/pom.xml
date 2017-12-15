@@ -17,7 +17,7 @@
     <sonar.pluginName>LITS</sonar.pluginName>
     <sonar.pluginClass>com.sonarsource.lits.LITSPlugin</sonar.pluginClass>
 
-    <sonar.version>5.6</sonar.version>
+    <sonar.version>6.7</sonar.version>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
   </properties>
 
@@ -49,6 +49,18 @@
       <artifactId>json-smart</artifactId>
       <version>1.1.1</version>
     </dependency>
+    <!-- For HTML Report -->
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.6</version>
+    </dependency>
+    <dependency>
+      <groupId>org.freemarker</groupId>
+      <artifactId>freemarker</artifactId>
+      <version>2.3.20</version>
+    </dependency>
+
 
     <!-- unit tests -->
     <dependency>
@@ -67,6 +79,12 @@
       <groupId>org.easytesting</groupId>
       <artifactId>fest-assert</artifactId>
       <version>1.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>1.9.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -112,8 +130,8 @@
             <configuration>
               <rules>
                 <requireFilesSize>
-                  <maxsize>900000</maxsize>
-                  <minsize>800000</minsize>
+                  <maxsize>1900000</maxsize>
+                  <minsize>1800000</minsize>
                   <files>
                     <file>${project.build.directory}/${project.build.finalName}.jar</file>
                   </files>
