@@ -22,22 +22,22 @@ package com.sonarsource.lits;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
-import org.sonar.api.batch.fs.internal.FileMetadata;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rules.ActiveRule;
-
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Matchers.anyString;
@@ -62,13 +62,17 @@ public class DumpPhaseTest {
     rulesProfile = mock(RulesProfile.class);
     decorator = new DumpPhase(checker, rulesProfile);
 
-    sensorContext = SensorContextTester.create(new File("src/test/resources"));
-    sensorContext.fileSystem().setWorkDir(temporaryFolder.newFolder());
-    sensorContext.fileSystem().add(
-      new DefaultInputFile("", "example.cpp")
-        .setLanguage("cpp")
-        .initMetadata(new FileMetadata().readMetadata(new FileReader("src/test/resources/example.cpp")))
-    );
+    File moduleBaseDir = new File("src/test/resources");
+    sensorContext = SensorContextTester.create(moduleBaseDir);
+    sensorContext.fileSystem().setWorkDir(temporaryFolder.newFolder().toPath());
+
+    DefaultInputFile defaultInputFile = new TestInputFileBuilder("moduleKey", "example.cpp")
+      .setModuleBaseDir(moduleBaseDir.toPath())
+      .initMetadata(new String(Files.readAllBytes(new File("src/test/resources/example.cpp").toPath()), StandardCharsets.UTF_8))
+      .setCharset(StandardCharsets.UTF_8)
+      .build();
+
+    sensorContext.fileSystem().add(defaultInputFile);
   }
 
   @Test
@@ -80,7 +84,7 @@ public class DumpPhaseTest {
 
   @Test
   public void should_save_on_project() {
-    when(checker.getByComponentKey(anyString())).thenReturn(HashMultiset.<IssueKey>create());
+    when(checker.getByComponentKey(anyString())).thenReturn(HashMultiset.create());
 
     decorator.save();
 

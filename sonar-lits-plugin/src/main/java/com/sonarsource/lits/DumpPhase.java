@@ -21,6 +21,9 @@ package com.sonarsource.lits;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Multiset;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import org.sonar.api.batch.Phase;
 import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputComponent;
@@ -35,10 +38,6 @@ import org.sonar.api.batch.sensor.issue.NewIssueLocation;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 // must be public for SQ picocontainer
 @Phase(name = Phase.Name.POST)

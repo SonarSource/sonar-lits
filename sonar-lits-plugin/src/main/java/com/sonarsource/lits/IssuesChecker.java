@@ -25,18 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
-import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.sonar.api.config.Settings;
-import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.rule.Severity;
-import org.sonar.api.rules.ActiveRule;
-import org.sonar.api.scan.issue.filter.FilterableIssue;
-import org.sonar.api.scan.issue.filter.IssueFilter;
-import org.sonar.api.scan.issue.filter.IssueFilterChain;
-import org.sonar.api.utils.MessageException;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -45,7 +33,19 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.sonar.api.config.Configuration;
+import org.sonar.api.profiles.RulesProfile;
+import org.sonar.api.rule.Severity;
+import org.sonar.api.rules.ActiveRule;
+import org.sonar.api.scan.issue.filter.FilterableIssue;
+import org.sonar.api.scan.issue.filter.IssueFilter;
+import org.sonar.api.scan.issue.filter.IssueFilterChain;
+import org.sonar.api.utils.MessageException;
 
 // must be public for SQ picocontainer
 public class IssuesChecker implements IssueFilter {
@@ -74,7 +74,7 @@ public class IssuesChecker implements IssueFilter {
   int differences = 0;
 
   // must be public for SQ picocontainer
-  public IssuesChecker(Settings settings, RulesProfile profile) {
+  public IssuesChecker(Configuration settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
     differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY);
@@ -111,7 +111,6 @@ public class IssuesChecker implements IssueFilter {
     if (disabled) {
       return true;
     }
-
     IssueKey issueKey = new IssueKey(issue.componentKey(), issue.ruleKey().toString(), issue.line());
     dump.add(issueKey);
     Multiset<IssueKey> componentIssues = getByComponentKey(issueKey.componentKey);
@@ -156,6 +155,7 @@ public class IssuesChecker implements IssueFilter {
       LOG.info("Saving " + newDumpFile);
       Dump.save(dump, newDumpFile);
       messages.add("Issues differences: " + differences);
+
     } else {
       LOG.info("No differences in issues");
     }
@@ -181,12 +181,12 @@ public class IssuesChecker implements IssueFilter {
     }
   }
 
-  private static File getFile(Settings settings, String property) {
-    String path = settings.getString(property);
-    if (path == null) {
+  private static File getFile(Configuration settings, String property) {
+    Optional<String> path = settings.get(property);
+    if (!path.isPresent()) {
       throw MessageException.of("Missing property '" + property + "'");
     }
-    File file = new File(path);
+    File file = new File(path.get());
     if (!file.isAbsolute()) {
       throw MessageException.of("Path must be absolute - check property '" + property + "'" );
     }
