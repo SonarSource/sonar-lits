@@ -32,7 +32,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
-import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.batch.fs.internal.FileMetadata;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
@@ -79,6 +78,7 @@ public class DumpPhaseTest {
     DefaultSensorDescriptor descriptor = new DefaultSensorDescriptor();
     decorator.describe(descriptor);
     assertThat(descriptor.name()).isEqualTo("LITS");
+    assertThat(descriptor.isGlobal()).isTrue();
   }
 
   @Test
