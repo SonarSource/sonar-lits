@@ -17,7 +17,7 @@
     <sonar.pluginName>LITS</sonar.pluginName>
     <sonar.pluginClass>com.sonarsource.lits.LITSPlugin</sonar.pluginClass>
 
-    <sonar.version>5.6</sonar.version>
+    <sonar.version>6.7</sonar.version>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
   </properties>
 
@@ -67,6 +67,12 @@
       <groupId>org.easytesting</groupId>
       <artifactId>fest-assert</artifactId>
       <version>1.4</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-all</artifactId>
+      <version>1.9.5</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

@@ -22,22 +22,23 @@ package com.sonarsource.lits;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.sonar.api.batch.fs.internal.DefaultInputFile;
-import org.sonar.api.batch.fs.internal.FileMetadata;
-import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
-import org.sonar.api.batch.sensor.internal.SensorContextTester;
-import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.rules.ActiveRule;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.fs.internal.DefaultFileSystem;
+import org.sonar.api.batch.fs.internal.DefaultInputFile;
+import org.sonar.api.batch.fs.internal.FileMetadata;
+import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
+import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
+import org.sonar.api.batch.sensor.internal.SensorContextTester;
+import org.sonar.api.profiles.RulesProfile;
+import org.sonar.api.rules.ActiveRule;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Matchers.anyString;
@@ -63,12 +64,14 @@ public class DumpPhaseTest {
     decorator = new DumpPhase(checker, rulesProfile);
 
     sensorContext = SensorContextTester.create(new File("src/test/resources"));
-    sensorContext.fileSystem().setWorkDir(temporaryFolder.newFolder());
-    sensorContext.fileSystem().add(
-      new DefaultInputFile("", "example.cpp")
-        .setLanguage("cpp")
-        .initMetadata(new FileMetadata().readMetadata(new FileReader("src/test/resources/example.cpp")))
-    );
+    DefaultFileSystem fs = new DefaultFileSystem(new File("src/test/resources"));
+    fs.setWorkDir(temporaryFolder.newFolder().toPath());
+    fs.add(TestInputFileBuilder
+      .create("", "example.cpp")
+      .setLanguage("cpp")
+      .setMetadata(new FileMetadata().readMetadata(new FileReader("src/test/resources/example.cpp")))
+      .build());
+    sensorContext.setFileSystem(fs);
   }
 
   @Test
