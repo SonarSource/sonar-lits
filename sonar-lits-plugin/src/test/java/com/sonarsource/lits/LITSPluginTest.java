@@ -21,6 +21,8 @@ package com.sonarsource.lits;
 
 import org.junit.Test;
 import org.sonar.api.Plugin;
+import org.sonar.api.SonarQubeSide;
+import org.sonar.api.internal.SonarRuntimeImpl;
 import org.sonar.api.utils.Version;
 
 import static org.fest.assertions.Assertions.assertThat;
@@ -29,7 +31,7 @@ public class LITSPluginTest {
 
   @Test
   public void test() {
-    Plugin.Context context = new Plugin.Context(Version.parse("5.6"));
+    Plugin.Context context = new Plugin.Context(SonarRuntimeImpl.forSonarQube(Version.parse("6.7"), SonarQubeSide.SCANNER));
     new LITSPlugin().define(context);
     assertThat(context.getExtensions()).containsOnly(IssuesChecker.class, DumpPhase.class);
   }

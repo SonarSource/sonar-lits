@@ -19,11 +19,14 @@
  */
 package com.sonarsource.lits;
 
+import java.io.File;
+import java.util.Arrays;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.config.Settings;
+import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.ActiveRule;
@@ -31,9 +34,6 @@ import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.RulePriority;
 import org.sonar.api.scan.issue.filter.FilterableIssue;
 import org.sonar.api.utils.MessageException;
-
-import java.io.File;
-import java.util.Arrays;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
@@ -63,7 +63,7 @@ public class IssuesCheckerTest {
 
   @Test
   public void path_must_be_specified() {
-    Settings settings = new Settings();
+    Settings settings = new MapSettings();
     thrown.expect(MessageException.class);
     thrown.expectMessage("Missing property 'dump.old'");
     new IssuesChecker(settings, profile);
@@ -71,7 +71,7 @@ public class IssuesCheckerTest {
 
   @Test
   public void path_must_be_absolute() {
-    Settings settings = new Settings();
+    Settings settings = new MapSettings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
     thrown.expect(MessageException.class);
     thrown.expectMessage("Path must be absolute - check property 'dump.old'");
@@ -167,7 +167,7 @@ public class IssuesCheckerTest {
   }
 
   private Settings newCorrectSettings() {
-    Settings settings = new Settings();
+    Settings settings = new MapSettings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/resources/").getAbsolutePath());
     settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, output.getAbsolutePath());
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, assertion.getAbsolutePath());
