@@ -23,13 +23,6 @@ import com.sonar.orchestrator.Orchestrator;
 import com.sonar.orchestrator.build.BuildResult;
 import com.sonar.orchestrator.build.SonarScanner;
 import com.sonar.orchestrator.locator.FileLocation;
-import com.sonar.orchestrator.locator.MavenLocation;
-import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import javax.annotation.CheckForNull;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -43,6 +36,12 @@ import org.sonarqube.ws.client.WsClient;
 import org.sonarqube.ws.client.WsClientFactories;
 import org.sonarqube.ws.client.measure.ComponentWsRequest;
 
+import javax.annotation.CheckForNull;
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+
 import static org.fest.assertions.Assertions.assertThat;
 
 public class LitsTest {
@@ -52,9 +51,8 @@ public class LitsTest {
 
   @ClassRule
   public static Orchestrator orchestrator = Orchestrator.builderEnv()
-    .setSonarVersion(Optional.ofNullable(System.getProperty("sonar.runtimeVersion")).orElse("LATEST_RELEASE[6.7]"))
-    .addPlugin(MavenLocation.of("org.sonarsource.java", "sonar-java-plugin", "5.3.0.13679"))
-    .addPlugin(FileLocation.byWildcardMavenFilename(new File("../../sonar-lits-plugin/target"), "sonar-lits-plugin-*-SNAPSHOT.jar"))
+    .addPlugin("java")
+    .addPlugin(FileLocation.byWildcardMavenFilename(new File("../../sonar-lits-plugin/target"), "sonar-lits-plugin-*.jar"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile.xml"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile_incorrect.xml"))
     .build();
