@@ -25,7 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.RuleKey;
@@ -57,13 +57,13 @@ public class IssuesCheckerTest {
   public void setup() throws Exception {
     output = new File(temporaryFolder.newFolder(), "dump");
     assertion = new File(temporaryFolder.newFolder(), "assertion");
-    Settings settings = newCorrectSettings();
+    Configuration settings = newCorrectSettings().asConfig();
     checker = new IssuesChecker(settings, profile);
   }
 
   @Test
   public void path_must_be_specified() {
-    Settings settings = new MapSettings();
+    Configuration settings = new MapSettings().asConfig();
     thrown.expect(MessageException.class);
     thrown.expectMessage("Missing property 'dump.old'");
     new IssuesChecker(settings, profile);
@@ -71,25 +71,25 @@ public class IssuesCheckerTest {
 
   @Test
   public void path_must_be_absolute() {
-    Settings settings = new MapSettings();
+    MapSettings settings = new MapSettings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
     thrown.expect(MessageException.class);
     thrown.expectMessage("Path must be absolute - check property 'dump.old'");
-    new IssuesChecker(settings, profile);
+    new IssuesChecker(settings.asConfig(), profile);
   }
 
   @Test
   public void differences_file_must_be_specified() {
-    Settings settings = newCorrectSettings();
-    settings.removeProperty(LITSPlugin.DIFFERENCES_PROPERTY);
+    MapSettings settings = newCorrectSettings();
+    settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, (String) null);
     thrown.expect(MessageException.class);
     thrown.expectMessage("Missing property 'lits.differences'");
-    new IssuesChecker(settings, profile);
+    new IssuesChecker(settings.asConfig(), profile);
   }
 
   @Test
   public void should_fail_when_incorrect_severity() {
-    Settings settings = newCorrectSettings();
+    Configuration settings = newCorrectSettings().asConfig();
     ActiveRule activeRule = new ActiveRule(profile, Rule.create("repositoryKey", "ruleKey"), RulePriority.BLOCKER);
     when(profile.getActiveRules()).thenReturn(Arrays.asList(activeRule));
     when(profile.getName()).thenReturn("profileName");
@@ -166,8 +166,8 @@ public class IssuesCheckerTest {
     }
   }
 
-  private Settings newCorrectSettings() {
-    Settings settings = new MapSettings();
+  private MapSettings newCorrectSettings() {
+    MapSettings settings = new MapSettings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, new File("src/test/resources/").getAbsolutePath());
     settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, output.getAbsolutePath());
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, assertion.getAbsolutePath());
