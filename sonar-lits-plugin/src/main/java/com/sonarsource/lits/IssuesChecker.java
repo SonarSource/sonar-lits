@@ -28,7 +28,7 @@ import com.google.common.collect.Multiset;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sonar.api.config.Settings;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.rules.ActiveRule;
@@ -74,7 +74,7 @@ public class IssuesChecker implements IssueFilter {
   int differences = 0;
 
   // must be public for SQ picocontainer
-  public IssuesChecker(Settings settings, RulesProfile profile) {
+  public IssuesChecker(Configuration settings, RulesProfile profile) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
     differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY);
@@ -88,10 +88,10 @@ public class IssuesChecker implements IssueFilter {
   Map<String, Multiset<IssueKey>> getPrevious() {
     if (previous == null) {
       if (!oldDumpFile.isDirectory()) {
-        LOG.warn("Directory not found: " + oldDumpFile);
+        LOG.warn("Directory not found: {}", oldDumpFile);
         previous = ImmutableMap.of();
       } else {
-        LOG.info("Loading " + oldDumpFile);
+        LOG.info("Loading {}", oldDumpFile);
         previous = Dump.load(oldDumpFile);
       }
     }
@@ -153,7 +153,7 @@ public class IssuesChecker implements IssueFilter {
     List<String> messages = new ArrayList<>();
     MessageException exception = null;
     if (different) {
-      LOG.info("Saving " + newDumpFile);
+      LOG.info("Saving {}", newDumpFile);
       Dump.save(dump, newDumpFile);
       messages.add("Issues differences: " + differences);
     } else {
@@ -181,11 +181,8 @@ public class IssuesChecker implements IssueFilter {
     }
   }
 
-  private static File getFile(Settings settings, String property) {
-    String path = settings.getString(property);
-    if (path == null) {
-      throw MessageException.of("Missing property '" + property + "'");
-    }
+  private static File getFile(Configuration settings, String property) {
+    String path = settings.get(property).orElseThrow(() -> MessageException.of("Missing property '" + property + "'"));
     File file = new File(path);
     if (!file.isAbsolute()) {
       throw MessageException.of("Path must be absolute - check property '" + property + "'" );
