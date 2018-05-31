@@ -21,6 +21,7 @@ package com.sonarsource.lits;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -34,6 +35,7 @@ import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.RulePriority;
 import org.sonar.api.scan.issue.filter.FilterableIssue;
 import org.sonar.api.utils.MessageException;
+import org.sonar.api.utils.log.LogTester;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
@@ -47,6 +49,9 @@ public class IssuesCheckerTest {
 
   @org.junit.Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @org.junit.Rule
+  public LogTester logTester = new LogTester();
 
   private RulesProfile profile = mock(RulesProfile.class);
   private IssuesChecker checker;
@@ -152,6 +157,21 @@ public class IssuesCheckerTest {
       assertThat(e.getMessage()).isEqualTo("Inactive rules: squid:S00103");
       assertThat(output).exists();
     }
+  }
+
+  @Test
+  public void getPrevious_should_return_empty_list_when_no_output_directory() {
+    MapSettings settings = new MapSettings();
+    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "/file/does/not/exist");
+    settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, "/file/does/not/exist");
+    settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, "/file/does/not/exist");
+    checker = new IssuesChecker(settings.asConfig(), profile);
+
+    Map previous = checker.getPrevious();
+
+    assertThat(logTester.logs()).hasSize(1);
+    assertThat(logTester.logs().get(0)).startsWith("Directory not found:");
+    assertThat(previous).isEmpty();
   }
 
   @Test
