@@ -26,8 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.Severity;
@@ -36,6 +34,8 @@ import org.sonar.api.scan.issue.filter.FilterableIssue;
 import org.sonar.api.scan.issue.filter.IssueFilter;
 import org.sonar.api.scan.issue.filter.IssueFilterChain;
 import org.sonar.api.utils.MessageException;
+import org.sonar.api.utils.log.Logger;
+import org.sonar.api.utils.log.Loggers;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,7 +50,7 @@ import java.util.Set;
 // must be public for SQ picocontainer
 public class IssuesChecker implements IssueFilter {
 
-  private static final Logger LOG = LoggerFactory.getLogger(IssuesChecker.class);
+  private static final Logger LOG = Loggers.get(IssuesChecker.class);
 
   private final File oldDumpFile;
   private final File newDumpFile;
