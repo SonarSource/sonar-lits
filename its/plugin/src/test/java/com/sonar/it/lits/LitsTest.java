@@ -23,6 +23,7 @@ import com.sonar.orchestrator.Orchestrator;
 import com.sonar.orchestrator.build.BuildResult;
 import com.sonar.orchestrator.build.SonarScanner;
 import com.sonar.orchestrator.locator.FileLocation;
+import com.sonar.orchestrator.locator.MavenLocation;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -51,7 +52,8 @@ public class LitsTest {
 
   @ClassRule
   public static Orchestrator orchestrator = Orchestrator.builderEnv()
-    .addPlugin("java")
+    .setSonarVersion(System.getProperty("sonar.runtimeVersion"))
+    .addPlugin(MavenLocation.of("org.sonarsource.java", "sonar-java-plugin", System.getProperty("javaVersion")))
     .addPlugin(FileLocation.byWildcardMavenFilename(new File("../../sonar-lits-plugin/target"), "sonar-lits-plugin-*.jar"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile.xml"))
     .restoreProfileAtStartup(FileLocation.of("src/test/project/profile_incorrect.xml"))
