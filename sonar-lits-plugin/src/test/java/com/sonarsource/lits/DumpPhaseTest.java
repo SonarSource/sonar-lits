@@ -34,13 +34,14 @@ import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.FileMetadata;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
+import org.sonar.api.batch.rule.ActiveRules;
+import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
 import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
-import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.rules.ActiveRule;
+import org.sonar.api.rule.RuleKey;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,7 +49,7 @@ import static org.mockito.Mockito.when;
 public class DumpPhaseTest {
 
   private IssuesChecker checker;
-  private RulesProfile rulesProfile;
+  private ActiveRules activeRules;
   private DumpPhase decorator;
 
   @Rule
@@ -59,8 +60,8 @@ public class DumpPhaseTest {
   @Before
   public void setup() throws IOException {
     checker = mock(IssuesChecker.class);
-    rulesProfile = mock(RulesProfile.class);
-    decorator = new DumpPhase(checker, rulesProfile);
+    activeRules = new ActiveRulesBuilder().build();
+    decorator = new DumpPhase(checker, activeRules);
 
     sensorContext = SensorContextTester.create(new File("src/test/resources"));
     DefaultFileSystem fs = new DefaultFileSystem(new File("src/test/resources"));
@@ -97,8 +98,8 @@ public class DumpPhaseTest {
     issues.add(new IssueKey("", "squid:S00104", null));
     when(checker.getByComponentKey(anyString())).thenReturn(issues);
 
-    ActiveRule activeRule = mock(ActiveRule.class);
-    when(rulesProfile.getActiveRule("squid", "S00103")).thenReturn(activeRule);
+    activeRules = new ActiveRulesBuilder().create(RuleKey.of("squid", "S00103")).activate().build();
+    decorator = new DumpPhase(checker, activeRules);
 
     decorator.execute(sensorContext);
 

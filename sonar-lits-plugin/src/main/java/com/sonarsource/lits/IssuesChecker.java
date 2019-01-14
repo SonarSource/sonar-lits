@@ -25,18 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
-import org.apache.commons.io.FileUtils;
-import org.sonar.api.config.Configuration;
-import org.sonar.api.profiles.RulesProfile;
-import org.sonar.api.rule.Severity;
-import org.sonar.api.rules.ActiveRule;
-import org.sonar.api.scan.issue.filter.FilterableIssue;
-import org.sonar.api.scan.issue.filter.IssueFilter;
-import org.sonar.api.scan.issue.filter.IssueFilterChain;
-import org.sonar.api.utils.MessageException;
-import org.sonar.api.utils.log.Logger;
-import org.sonar.api.utils.log.Loggers;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -46,6 +34,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.io.FileUtils;
+import org.sonar.api.batch.rule.ActiveRule;
+import org.sonar.api.batch.rule.ActiveRules;
+import org.sonar.api.config.Configuration;
+import org.sonar.api.rule.RuleKey;
+import org.sonar.api.rule.Severity;
+import org.sonar.api.scan.issue.filter.FilterableIssue;
+import org.sonar.api.scan.issue.filter.IssueFilter;
+import org.sonar.api.scan.issue.filter.IssueFilterChain;
+import org.sonar.api.utils.MessageException;
+import org.sonar.api.utils.log.Logger;
+import org.sonar.api.utils.log.Loggers;
 
 // must be public for SQ picocontainer
 public class IssuesChecker implements IssueFilter {
@@ -74,13 +74,14 @@ public class IssuesChecker implements IssueFilter {
   int differences = 0;
 
   // must be public for SQ picocontainer
-  public IssuesChecker(Configuration settings, RulesProfile profile) {
+  public IssuesChecker(Configuration settings, ActiveRules activerules) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
     differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY);
-    for (ActiveRule activeRule : profile.getActiveRules()) {
-      if (!activeRule.getSeverity().toString().equals(Severity.INFO)) {
-        throw MessageException.of("Rule '" + activeRule.getRepositoryKey() + ":" + activeRule.getRuleKey() + "' must be declared with severity INFO");
+    for (ActiveRule activeRule : activerules.findAll()) {
+      if (!activeRule.severity().equals(Severity.INFO)) {
+        RuleKey ruleKey = activeRule.ruleKey();
+        throw MessageException.of("Rule '" + ruleKey.repository() + ":" + ruleKey.rule() + "' must be declared with severity INFO");
       }
     }
   }
