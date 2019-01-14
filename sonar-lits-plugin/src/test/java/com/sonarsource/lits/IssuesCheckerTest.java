@@ -20,18 +20,16 @@
 package com.sonarsource.lits;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.rule.ActiveRules;
+import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.config.internal.MapSettings;
-import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.api.rules.ActiveRule;
-import org.sonar.api.rules.Rule;
 import org.sonar.api.rules.RulePriority;
 import org.sonar.api.scan.issue.filter.FilterableIssue;
 import org.sonar.api.utils.MessageException;
@@ -53,7 +51,7 @@ public class IssuesCheckerTest {
   @org.junit.Rule
   public LogTester logTester = new LogTester();
 
-  private RulesProfile profile = mock(RulesProfile.class);
+  private ActiveRules activeRules;
   private IssuesChecker checker;
   private File output;
   private File assertion;
@@ -63,7 +61,8 @@ public class IssuesCheckerTest {
     output = new File(temporaryFolder.newFolder(), "dump");
     assertion = new File(temporaryFolder.newFolder(), "assertion");
     Configuration settings = newCorrectSettings().asConfig();
-    checker = new IssuesChecker(settings, profile);
+    activeRules = new ActiveRulesBuilder().build();
+    checker = new IssuesChecker(settings, activeRules);
   }
 
   @Test
@@ -71,7 +70,7 @@ public class IssuesCheckerTest {
     Configuration settings = new MapSettings().asConfig();
     thrown.expect(MessageException.class);
     thrown.expectMessage("Missing property 'dump.old'");
-    new IssuesChecker(settings, profile);
+    new IssuesChecker(settings, activeRules);
   }
 
   @Test
@@ -80,7 +79,7 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
     thrown.expect(MessageException.class);
     thrown.expectMessage("Path must be absolute - check property 'dump.old'");
-    new IssuesChecker(settings.asConfig(), profile);
+    new IssuesChecker(settings.asConfig(), activeRules);
   }
 
   @Test
@@ -89,19 +88,21 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, (String) null);
     thrown.expect(MessageException.class);
     thrown.expectMessage("Missing property 'lits.differences'");
-    new IssuesChecker(settings.asConfig(), profile);
+    new IssuesChecker(settings.asConfig(), activeRules);
   }
 
   @Test
   public void should_fail_when_incorrect_severity() {
     Configuration settings = newCorrectSettings().asConfig();
-    ActiveRule activeRule = new ActiveRule(profile, Rule.create("repositoryKey", "ruleKey"), RulePriority.BLOCKER);
-    when(profile.getActiveRules()).thenReturn(Arrays.asList(activeRule));
-    when(profile.getName()).thenReturn("profileName");
+    activeRules = new ActiveRulesBuilder()
+      .create(RuleKey.of("repositoryKey", "ruleKey"))
+      .setSeverity(RulePriority.BLOCKER.toString())
+      .activate()
+      .build();
 
     thrown.expect(MessageException.class);
     thrown.expectMessage("Rule 'repositoryKey:ruleKey' must be declared with severity INFO");
-    new IssuesChecker(settings, profile);
+    new IssuesChecker(settings, activeRules);
   }
 
   @Test
@@ -165,7 +166,7 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "/file/does/not/exist");
     settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, "/file/does/not/exist");
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, "/file/does/not/exist");
-    checker = new IssuesChecker(settings.asConfig(), profile);
+    checker = new IssuesChecker(settings.asConfig(), activeRules);
 
     Map previous = checker.getPrevious();
 

@@ -29,27 +29,27 @@ import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.InputDir;
 import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.rule.ActiveRule;
+import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.rule.Severity;
 import org.sonar.api.batch.sensor.Sensor;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.SensorDescriptor;
 import org.sonar.api.batch.sensor.issue.NewIssue;
 import org.sonar.api.batch.sensor.issue.NewIssueLocation;
-import org.sonar.api.profiles.RulesProfile;
 import org.sonar.api.rule.RuleKey;
-import org.sonar.api.rules.ActiveRule;
 
 // must be public for SQ picocontainer
 @Phase(name = Phase.Name.POST)
 public class DumpPhase implements Sensor {
 
   private final IssuesChecker checker;
-  private final RulesProfile profile;
+  private final ActiveRules activeRules;
 
   // must be public for SQ picocontainer
-  public DumpPhase(IssuesChecker checker, RulesProfile profile) {
+  public DumpPhase(IssuesChecker checker, ActiveRules activeRules) {
     this.checker = checker;
-    this.profile = profile;
+    this.activeRules = activeRules;
   }
 
   @Override
@@ -85,7 +85,7 @@ public class DumpPhase implements Sensor {
         // missing issue => create
         checker.different = true;
         RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
-        ActiveRule activeRule = profile.getActiveRule(ruleKey.repository(), ruleKey.rule());
+        ActiveRule activeRule = activeRules.find(ruleKey);
         if (activeRule == null) {
           // rule not active => skip it
           checker.inactiveRule(issueKey.ruleKey);
