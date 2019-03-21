@@ -47,6 +47,8 @@ import static org.fest.assertions.Assertions.assertThat;
 
 public class LitsTest {
 
+  private static final String PROJECT_KEY = "project";
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -129,7 +131,7 @@ public class LitsTest {
   @Test
   public void profile_incorrect() throws Exception {
     SonarScanner build = createSonarRunner("dumps/differences/");
-    build.setProfile("profile_incorrect");
+    orchestrator.getServer().associateProjectToQualityProfile(PROJECT_KEY, "java", "profile_incorrect");
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
     assertThat(buildResult.getStatus()).isNotEqualTo(0);
@@ -137,12 +139,12 @@ public class LitsTest {
   }
 
   private SonarScanner createSonarRunner(String dumpOld) throws IOException {
+    orchestrator.getServer().provisionProject(PROJECT_KEY, PROJECT_KEY);
+    orchestrator.getServer().associateProjectToQualityProfile(PROJECT_KEY, "java", "profile");
     return SonarScanner.create(projectDir)
-      .setProjectKey("project")
-      .setProjectName("project")
+      .setProjectKey(PROJECT_KEY)
       .setProjectVersion("1")
       .setSourceDirs("src")
-      .setProfile("profile")
       .setProperty("dump.old", new File(projectDir, dumpOld).toString())
       .setProperty("dump.new", output.toString())
       .setProperty("lits.differences", temporaryFolder.newFile("differences").getAbsolutePath())
@@ -164,13 +166,13 @@ public class LitsTest {
   }
 
   @CheckForNull
-  static Integer getMeasureAsInt(String componentKey, String metricKey) {
+  private static Integer getMeasureAsInt(String componentKey, String metricKey) {
     WsMeasures.Measure measure = getMeasure(componentKey, metricKey);
     return (measure == null) ? null : Integer.parseInt(measure.getValue());
   }
 
   @CheckForNull
-  static WsMeasures.Measure getMeasure(String componentKey, String metricKey) {
+  private static WsMeasures.Measure getMeasure(String componentKey, String metricKey) {
     WsMeasures.ComponentWsResponse response = newWsClient().measures().component(new ComponentWsRequest()
       .setComponentKey(componentKey)
       .setMetricKeys(Collections.singletonList(metricKey)));
@@ -178,7 +180,7 @@ public class LitsTest {
     return measures.size() == 1 ? measures.get(0) : null;
   }
 
-  static WsClient newWsClient() {
+  private static WsClient newWsClient() {
     return WsClientFactories.getDefault().newClient(HttpConnector.newBuilder()
       .url(orchestrator.getServer().getUrl())
       .build());
