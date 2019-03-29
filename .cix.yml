@@ -5,6 +5,6 @@ TEST:
   - plugin
 
 SQ_VERSION:
-  - DEV
+  - DOGFOOD
   - LATEST_RELEASE[6.7]
   - LATEST_RELEASE
