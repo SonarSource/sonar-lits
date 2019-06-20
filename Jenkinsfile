@@ -73,7 +73,7 @@ def runITs(TEST,SQ_VERSION) {
     mavenSetBuildVersion()        
     gitFetchSubmodules()
     dir("its/$TEST") {    
-      runMavenOrch(JDK_VERSION,"test -Dsonar.runtimeVersion=$SQ_VERSION")
+      runMavenOrch(JDK_VERSION,"test -DjavaVersion=\"LATEST_RELEASE\" -Dsonar.runtimeVersion=$SQ_VERSION")
     }
   }
 }
