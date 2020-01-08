@@ -24,11 +24,6 @@ import com.sonar.orchestrator.build.BuildResult;
 import com.sonar.orchestrator.build.SonarScanner;
 import com.sonar.orchestrator.locator.FileLocation;
 import com.sonar.orchestrator.locator.MavenLocation;
-import java.io.File;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import javax.annotation.CheckForNull;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -41,6 +36,12 @@ import org.sonarqube.ws.client.HttpConnector;
 import org.sonarqube.ws.client.WsClient;
 import org.sonarqube.ws.client.WsClientFactories;
 import org.sonarqube.ws.client.measures.ComponentRequest;
+
+import javax.annotation.CheckForNull;
+import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 import static org.fest.assertions.Assertions.assertThat;
 
@@ -134,7 +135,7 @@ public class LitsTest {
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
     assertThat(buildResult.getStatus()).isNotEqualTo(0);
-    assertThat(buildResult.getLogs()).contains("Rule 'squid:S00103' must be declared with severity INFO");
+    assertThat(buildResult.getLogs()).contains("Rule 'java:S103' must be declared with severity INFO");
   }
 
   private SonarScanner createSonarRunner(String dumpOld) throws IOException {
