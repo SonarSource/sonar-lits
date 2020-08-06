@@ -182,7 +182,7 @@ public class IssuesCheckerTest {
       checker.save();
       fail("Expected exception");
     } catch (MessageException e) {
-      assertThat(e.getMessage()).isEqualTo("Missing resources: missing_resource");
+      assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: missing_resource");
       assertThat(output).exists();
     }
   }

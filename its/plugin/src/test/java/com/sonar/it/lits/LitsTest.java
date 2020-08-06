@@ -123,7 +123,7 @@ public class LitsTest {
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
     assertThat(buildResult.getStatus()).isNotEqualTo(0);
-    assertThat(buildResult.getLogs()).contains("Missing resources: project:src/Missing.java");
+    assertThat(buildResult.getLogs()).contains("Files listed in Expected directory were not analyzed: project:src/Missing.java");
 
     assertThat(output).exists();
   }

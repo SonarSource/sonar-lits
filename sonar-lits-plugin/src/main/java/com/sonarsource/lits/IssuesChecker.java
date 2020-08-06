@@ -166,7 +166,7 @@ public class IssuesChecker implements IssueFilter {
       exception = MessageException.of(message);
     }
     if (!missingResources.isEmpty()) {
-      String message = "Missing resources: " + Joiner.on(", ").join(missingResources);
+      String message = "Files listed in Expected directory were not analyzed: " + Joiner.on(", ").join(missingResources);
       messages.add(message);
       exception = MessageException.of(message);
     }
@@ -186,7 +186,7 @@ public class IssuesChecker implements IssueFilter {
     String path = settings.get(property).orElseThrow(() -> MessageException.of("Missing property '" + property + "'"));
     File file = new File(path);
     if (!file.isAbsolute()) {
-      throw MessageException.of("Path must be absolute - check property '" + property + "'" );
+      throw MessageException.of("Path must be absolute - check property '" + property + "'");
     }
     return file;
   }
