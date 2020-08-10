@@ -182,7 +182,21 @@ public class IssuesCheckerTest {
       checker.save();
       fail("Expected exception");
     } catch (MessageException e) {
-      assertThat(e.getMessage()).isEqualTo("Missing resources: missing_resource");
+      assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: missing_resource");
+      assertThat(output).exists();
+    }
+  }
+
+  @Test
+  public void multiple_missing_resources_show_all_names_in_error_message() {
+    checker.missingResource("first_missing");
+    checker.missingResource("second_missing");
+    checker.missingResource("third_missing");
+    try {
+      checker.save();
+      fail("Expected exception");
+    } catch (MessageException e) {
+      assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: first_missing, third_missing, second_missing");
       assertThat(output).exists();
     }
   }
