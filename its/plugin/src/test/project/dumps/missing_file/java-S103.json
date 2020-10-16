@@ -1,9 +1,9 @@
 {
-  'project:src/Example.java': [
+  'missingFile:src/Example.java': [
     1,
     2
   ],
-  'project:src/Missing.java': [
+  'missingFile:src/Missing.java': [
     1
   ]
 }
