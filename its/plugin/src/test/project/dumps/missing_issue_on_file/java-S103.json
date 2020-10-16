@@ -1,5 +1,5 @@
 {
-  'project:src/Example.java': [
+  'missingIssueOnFile:src/Example.java': [
     0
   ]
 }

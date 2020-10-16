@@ -29,12 +29,12 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.sonar.wsclient.issue.Issue;
-import org.sonar.wsclient.issue.IssueQuery;
+import org.sonarqube.ws.Issues;
 import org.sonarqube.ws.Measures;
 import org.sonarqube.ws.client.HttpConnector;
 import org.sonarqube.ws.client.WsClient;
 import org.sonarqube.ws.client.WsClientFactories;
+import org.sonarqube.ws.client.issues.SearchRequest;
 import org.sonarqube.ws.client.measures.ComponentRequest;
 
 import javax.annotation.CheckForNull;
@@ -43,11 +43,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import static java.util.Collections.singletonList;
 import static org.fest.assertions.Assertions.assertThat;
 
 public class LitsTest {
-
-  private static final String PROJECT_KEY = "project";
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -62,8 +61,7 @@ public class LitsTest {
     .build();
 
   @Before
-  public void resetData() throws Exception {
-    orchestrator.resetData();
+  public void before() throws Exception {
     output = new File(temporaryFolder.newFolder(), "dump");
   }
 
@@ -72,34 +70,37 @@ public class LitsTest {
 
   @Test
   public void differences() throws Exception {
-    SonarScanner build = createSonarRunner("dumps/differences/");
+    final String projectKey = "differences";
+    SonarScanner build = createSonarRunner(projectKey, "dumps/differences/");
     orchestrator.executeBuild(build);
 
     assertThat(output).exists();
 
-    assertThat(getIssuesMeasure()).isEqualTo(2);
-    assertThat(issue("BLOCKER").line()).isEqualTo(3);
-    assertThat(issue("INFO").line()).isEqualTo(2);
+    assertThat(getIssuesMeasure(projectKey)).isEqualTo(2);
+    assertThat(issue(projectKey, "BLOCKER").getLine()).isEqualTo(3);
+    assertThat(issue(projectKey, "INFO").getLine()).isEqualTo(2);
   }
 
   @Test
   public void no_differences() throws Exception {
-    SonarScanner build = createSonarRunner("dumps/no_differences/");
+    final String projectKey = "noDifferences";
+    SonarScanner build = createSonarRunner(projectKey, "dumps/no_differences/");
 
     orchestrator.executeBuild(build);
 
     assertThat(output).doesNotExist();
 
-    assertThat(getIssuesMeasure()).isEqualTo(0);
+    assertThat(getIssuesMeasure(projectKey)).isEqualTo(0);
   }
 
   @Test
   public void rule_removed() throws Exception {
-    SonarScanner build = createSonarRunner("dumps/rule_removed/");
+    final String projectKey = "ruleRemoved";
+    SonarScanner build = createSonarRunner(projectKey, "dumps/rule_removed/");
 
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
-    assertThat(buildResult.getStatus()).isNotEqualTo(0);
+    assertThat(buildResult.getLastStatus()).isNotEqualTo(0);
     assertThat(buildResult.getLogs()).contains("Inactive rules: squid:not_in_profile");
 
     assertThat(output).exists();
@@ -107,42 +108,45 @@ public class LitsTest {
 
   @Test
   public void missing_issue_on_file() throws Exception {
-    SonarScanner build = createSonarRunner("dumps/missing_issue_on_file/");
+    final String projectKey = "missingIssueOnFile";
+    SonarScanner build = createSonarRunner(projectKey, "dumps/missing_issue_on_file/");
 
     orchestrator.executeBuild(build);
 
     assertThat(output).exists();
 
-    assertThat(issue("BLOCKER").line()).isNull();
+    assertThat(issue(projectKey, "BLOCKER").getLine()).isEqualTo(0);
   }
 
   @Test
   public void missing_file() throws Exception {
-    SonarScanner build = createSonarRunner("dumps/missing_file/");
+    final String projectKey = "missingFile";
+    SonarScanner build = createSonarRunner(projectKey, "dumps/missing_file/");
 
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
-    assertThat(buildResult.getStatus()).isNotEqualTo(0);
-    assertThat(buildResult.getLogs()).contains("Files listed in Expected directory were not analyzed: project:src/Missing.java");
+    assertThat(buildResult.getLastStatus()).isNotEqualTo(0);
+    assertThat(buildResult.getLogs()).contains("Files listed in Expected directory were not analyzed: missingFile:src/Missing.java");
 
     assertThat(output).exists();
   }
 
   @Test
   public void profile_incorrect() throws Exception {
-    SonarScanner build = createSonarRunner("dumps/differences/");
-    orchestrator.getServer().associateProjectToQualityProfile(PROJECT_KEY, "java", "profile_incorrect");
+    final String projectKey = "profileIncorrect";
+    SonarScanner build = createSonarRunner(projectKey, "dumps/differences/");
+    orchestrator.getServer().associateProjectToQualityProfile(projectKey, "java", "profile_incorrect");
     BuildResult buildResult = orchestrator.executeBuildQuietly(build);
 
-    assertThat(buildResult.getStatus()).isNotEqualTo(0);
+    assertThat(buildResult.getLastStatus()).isNotEqualTo(0);
     assertThat(buildResult.getLogs()).contains("Rule 'java:S103' must be declared with severity INFO");
   }
 
-  private SonarScanner createSonarRunner(String dumpOld) throws IOException {
-    orchestrator.getServer().provisionProject(PROJECT_KEY, PROJECT_KEY);
-    orchestrator.getServer().associateProjectToQualityProfile(PROJECT_KEY, "java", "profile");
+  private SonarScanner createSonarRunner(String projectKey, String dumpOld) throws IOException {
+    orchestrator.getServer().provisionProject(projectKey, projectKey);
+    orchestrator.getServer().associateProjectToQualityProfile(projectKey, "java", "profile");
     return SonarScanner.create(projectDir)
-      .setProjectKey(PROJECT_KEY)
+      .setProjectKey(projectKey)
       .setProjectVersion("1")
       .setSourceDirs("src")
       .setProperty("dump.old", new File(projectDir, dumpOld).toString())
@@ -151,18 +155,21 @@ public class LitsTest {
       .setProperty("sonar.cpd.skip", "true");
   }
 
-  private static Issue issue(String severity) {
-    List<Issue> violations = issues(severity);
+  private static Issues.Issue issue(String projectKey, String severity) {
+    List<Issues.Issue> violations = issues(projectKey, severity);
     assertThat(violations.size()).isEqualTo(1);
     return violations.get(0);
   }
 
-  private static List<Issue> issues(String severity) {
-    return orchestrator.getServer().wsClient().issueClient().find(IssueQuery.create().severities(severity)).list();
+  static List<Issues.Issue> issues(String componentKey, String severity) {
+    return newWsClient().issues().search(new SearchRequest()
+      .setSeverities(Collections.singletonList(severity))
+      .setComponentKeys(singletonList(componentKey))
+    ).getIssuesList();
   }
 
-  private static Integer getIssuesMeasure() {
-    return getMeasureAsInt("project", "violations");
+  private static Integer getIssuesMeasure(String projectKey) {
+    return getMeasureAsInt(projectKey, "violations");
   }
 
   @CheckForNull

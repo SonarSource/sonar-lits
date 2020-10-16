@@ -1,5 +1,5 @@
 {
-  'project:src/Example.java': [
+  'differences:src/Example.java': [
     1,
     3
   ]

@@ -1,5 +1,5 @@
 {
-  'project:src/Example.java': [
+  'ruleRemoved:src/Example.java': [
     1
   ]
 }
