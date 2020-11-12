@@ -32,6 +32,7 @@ import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.rule.RuleKey;
 import org.sonar.api.rules.RulePriority;
 import org.sonar.api.scan.issue.filter.FilterableIssue;
+import org.sonar.api.scan.issue.filter.IssueFilterChain;
 import org.sonar.api.utils.MessageException;
 import org.sonar.api.utils.log.LogTester;
 
@@ -55,6 +56,8 @@ public class IssuesCheckerTest {
   private IssuesChecker checker;
   private File output;
   private File assertion;
+  private IssueFilterChain chainReturnTrue = (issue) -> true;
+  private IssueFilterChain chainReturnFalse = (issue) -> false;
 
   @Before
   public void setup() throws Exception {
@@ -118,7 +121,7 @@ public class IssuesCheckerTest {
     when(issue.componentKey()).thenReturn("");
     when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
 
-    assertThat(checker.accept(issue, null)).isTrue();
+    assertThat(checker.accept(issue, chainReturnTrue)).isTrue();
     checker.save();
 
     assertThat(output).exists();
@@ -131,7 +134,19 @@ public class IssuesCheckerTest {
     when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
 
     checker.disabled = true;
-    assertThat(checker.accept(issue, null)).isTrue();
+    assertThat(checker.accept(issue, chainReturnTrue)).isTrue();
+    checker.save();
+
+    assertThat(output).doesNotExist();
+  }
+
+  @Test
+  public void should_return_false_if_chain_return_false() {
+    FilterableIssue issue = mock(FilterableIssue.class);
+    when(issue.componentKey()).thenReturn("");
+    when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
+
+    assertThat(checker.accept(issue, chainReturnFalse)).isFalse();
     checker.save();
 
     assertThat(output).doesNotExist();
@@ -145,7 +160,7 @@ public class IssuesCheckerTest {
     when(issue.line()).thenReturn(1);
     when(issue.severity()).thenReturn("INFO");
 
-    assertThat(checker.accept(issue, null)).isFalse();
+    assertThat(checker.accept(issue, chainReturnTrue)).isFalse();
   }
 
   @Test
