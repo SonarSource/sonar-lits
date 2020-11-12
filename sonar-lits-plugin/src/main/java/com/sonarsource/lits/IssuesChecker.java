@@ -109,6 +109,9 @@ public class IssuesChecker implements IssueFilter {
 
   @Override
   public boolean accept(FilterableIssue issue, IssueFilterChain chain) {
+    if (!chain.accept(issue)) {
+      return false;
+    }
     if (disabled) {
       return true;
     }
