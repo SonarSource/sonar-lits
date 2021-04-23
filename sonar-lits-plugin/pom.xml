@@ -4,7 +4,7 @@
   <parent>
     <groupId>org.sonarsource.sonar-lits-plugin</groupId>
     <artifactId>lits</artifactId>
-    <version>0.9.0-SNAPSHOT</version>
+    <version>0.10.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>sonar-lits-plugin</artifactId>
