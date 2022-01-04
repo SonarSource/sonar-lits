@@ -35,6 +35,7 @@ import org.sonar.api.scan.issue.filter.FilterableIssue;
 import org.sonar.api.scan.issue.filter.IssueFilterChain;
 import org.sonar.api.utils.MessageException;
 import org.sonar.api.utils.log.LogTester;
+import org.sonar.api.utils.log.LoggerLevel;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.fest.assertions.Fail.fail;
@@ -72,8 +73,24 @@ public class IssuesCheckerTest {
   public void path_must_be_specified() {
     Configuration settings = new MapSettings().asConfig();
     thrown.expect(MessageException.class);
-    thrown.expectMessage("Missing property 'dump.old'");
+    thrown.expectMessage("Missing property 'sonar.lits.dump.old'");
     new IssuesChecker(settings, activeRules);
+  }
+
+  @Test
+  public void path_deprecated_property_name() {
+    MapSettings settings = new MapSettings();
+    settings.setProperty("dump.old", "/some/old/dump");
+    settings.setProperty("dump.new", "/some/new/dump");
+    settings.setProperty("lits.differences", "/some/diff/file");
+
+    new IssuesChecker(settings.asConfig(), activeRules);
+
+    assertThat(logTester.logs(LoggerLevel.WARN)).containsExactly(
+      "Property 'dump.old' is deprecated, use 'sonar.lits.dump.old' instead",
+      "Property 'dump.new' is deprecated, use 'sonar.lits.dump.new' instead",
+      "Property 'lits.differences' is deprecated, use 'sonar.lits.differences' instead"
+    );
   }
 
   @Test
@@ -81,7 +98,7 @@ public class IssuesCheckerTest {
     MapSettings settings = new MapSettings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
     thrown.expect(MessageException.class);
-    thrown.expectMessage("Path must be absolute - check property 'dump.old'");
+    thrown.expectMessage("Path must be absolute - check property 'sonar.lits.dump.old'");
     new IssuesChecker(settings.asConfig(), activeRules);
   }
 
@@ -90,7 +107,7 @@ public class IssuesCheckerTest {
     MapSettings settings = newCorrectSettings();
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, (String) null);
     thrown.expect(MessageException.class);
-    thrown.expectMessage("Missing property 'lits.differences'");
+    thrown.expectMessage("Missing property 'sonar.lits.differences'");
     new IssuesChecker(settings.asConfig(), activeRules);
   }
 
