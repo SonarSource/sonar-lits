@@ -27,11 +27,6 @@ public class LITSPlugin implements Plugin {
   static final String NEW_DUMP_PROPERTY = "sonar.lits.dump.new";
   static final String DIFFERENCES_PROPERTY = "sonar.lits.differences";
 
-  // These property names are deprecated, but kept from compatibility reasons
-  static final String DEPRECATED_OLD_DUMP_PROPERTY = "dump.old";
-  static final String DEPRECATED_NEW_DUMP_PROPERTY = "dump.new";
-  static final String DEPRECATED_DIFFERENCES_PROPERTY = "lits.differences";
-
   @Override
   public void define(Context context) {
     context.addExtensions(IssuesChecker.class, DumpPhase.class);

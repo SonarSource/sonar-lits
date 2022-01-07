@@ -20,6 +20,7 @@
 package com.sonarsource.lits;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
@@ -75,22 +76,6 @@ public class IssuesCheckerTest {
     thrown.expect(MessageException.class);
     thrown.expectMessage("Missing property 'sonar.lits.dump.old'");
     new IssuesChecker(settings, activeRules);
-  }
-
-  @Test
-  public void path_deprecated_property_name() {
-    MapSettings settings = new MapSettings();
-    settings.setProperty("dump.old", "/some/old/dump");
-    settings.setProperty("dump.new", "/some/new/dump");
-    settings.setProperty("lits.differences", "/some/diff/file");
-
-    new IssuesChecker(settings.asConfig(), activeRules);
-
-    assertThat(logTester.logs(LoggerLevel.WARN)).containsExactly(
-      "Property 'dump.old' is deprecated, use 'sonar.lits.dump.old' instead",
-      "Property 'dump.new' is deprecated, use 'sonar.lits.dump.new' instead",
-      "Property 'lits.differences' is deprecated, use 'sonar.lits.differences' instead"
-    );
   }
 
   @Test
@@ -193,11 +178,13 @@ public class IssuesCheckerTest {
   }
 
   @Test
-  public void getPrevious_should_return_empty_list_when_no_output_directory() {
+  public void getPrevious_should_return_empty_list_when_no_output_directory() throws IOException {
+    String nonExistingPath = new File("file/does/not/exist").getCanonicalPath();
+
     MapSettings settings = new MapSettings();
-    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "/file/does/not/exist");
-    settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, "/file/does/not/exist");
-    settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, "/file/does/not/exist");
+    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, nonExistingPath);
+    settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, nonExistingPath);
+    settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, nonExistingPath);
     checker = new IssuesChecker(settings.asConfig(), activeRules);
 
     Map previous = checker.getPrevious();

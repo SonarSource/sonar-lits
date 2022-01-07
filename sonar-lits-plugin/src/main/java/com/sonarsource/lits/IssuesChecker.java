@@ -33,7 +33,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.io.FileUtils;
 import org.sonar.api.batch.rule.ActiveRule;
@@ -76,9 +75,9 @@ public class IssuesChecker implements IssueFilter {
 
   // must be public for SQ picocontainer
   public IssuesChecker(Configuration settings, ActiveRules activerules) {
-    oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY, LITSPlugin.DEPRECATED_OLD_DUMP_PROPERTY);
-    newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY, LITSPlugin.DEPRECATED_NEW_DUMP_PROPERTY);
-    differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY, LITSPlugin.DEPRECATED_DIFFERENCES_PROPERTY);
+    oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
+    newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
+    differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY);
     for (ActiveRule activeRule : activerules.findAll()) {
       if (!activeRule.severity().equals(Severity.INFO)) {
         RuleKey ruleKey = activeRule.ruleKey();
@@ -186,19 +185,9 @@ public class IssuesChecker implements IssueFilter {
     }
   }
 
-  private static File getFile(Configuration settings, String property, String deprecatedProperty) {
-    Optional<String> path = settings.get(property);
-    if (!path.isPresent()) {
-      // The setting with the new property name was not found: remove the LITS-specific prefix and try with the old property name.
-      path = settings.get(deprecatedProperty);
-      if (path.isPresent()) {
-        LOG.warn("Property '" + deprecatedProperty + "' is deprecated, use '" + property + "' instead");
-      } else {
-        throw MessageException.of("Missing property '" + property + "'");
-      }
-    }
-
-    File file = new File(path.get());
+  private static File getFile(Configuration settings, String property) {
+    String path = settings.get(property).orElseThrow(() -> MessageException.of("Missing property '" + property + "'"));
+    File file = new File(path);
     if (!file.isAbsolute()) {
       throw MessageException.of("Path must be absolute - check property '" + property + "'");
     }
