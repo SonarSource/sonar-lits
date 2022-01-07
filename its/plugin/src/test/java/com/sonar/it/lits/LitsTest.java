@@ -149,9 +149,9 @@ public class LitsTest {
       .setProjectKey(projectKey)
       .setProjectVersion("1")
       .setSourceDirs("src")
-      .setProperty("dump.old", new File(projectDir, dumpOld).toString())
-      .setProperty("dump.new", output.toString())
-      .setProperty("lits.differences", temporaryFolder.newFile("differences").getAbsolutePath())
+      .setProperty("sonar.lits.dump.old", new File(projectDir, dumpOld).toString())
+      .setProperty("sonar.lits.dump.new", output.toString())
+      .setProperty("sonar.lits.differences", temporaryFolder.newFile("differences").getAbsolutePath())
       .setProperty("sonar.cpd.skip", "true");
   }
 
