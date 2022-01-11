@@ -20,6 +20,7 @@
 package com.sonarsource.lits;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,7 +71,7 @@ public class IssuesCheckerTest {
     Configuration settings = new MapSettings().asConfig();
     MessageException e = assertThrows(MessageException.class, () ->
       new IssuesChecker(settings, activeRules));
-    assertEquals("Missing property 'dump.old'", e.getMessage());
+    assertEquals("Missing property 'sonar.lits.dump.old'", e.getMessage());
   }
 
   @Test
@@ -79,7 +80,7 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
     MessageException e = assertThrows(MessageException.class, () ->
         new IssuesChecker(settings.asConfig(), activeRules));
-    assertEquals("Path must be absolute - check property 'dump.old'", e.getMessage());
+    assertEquals("Path must be absolute - check property 'sonar.lits.dump.old'", e.getMessage());
   }
 
   @Test
@@ -88,7 +89,7 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, (String) null);
     MessageException e = assertThrows(MessageException.class, () ->
       new IssuesChecker(settings.asConfig(), activeRules));
-    assertEquals("Missing property 'lits.differences'", e.getMessage());
+    assertEquals("Missing property 'sonar.lits.differences'", e.getMessage());
   }
 
   @Test
@@ -170,11 +171,13 @@ public class IssuesCheckerTest {
   }
 
   @Test
-  public void getPrevious_should_return_empty_list_when_no_output_directory() {
+  public void getPrevious_should_return_empty_list_when_no_output_directory() throws IOException {
+    String nonExistingPath = new File("file/does/not/exist").getCanonicalPath();
+
     MapSettings settings = new MapSettings();
-    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "/file/does/not/exist");
-    settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, "/file/does/not/exist");
-    settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, "/file/does/not/exist");
+    settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, nonExistingPath);
+    settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, nonExistingPath);
+    settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, nonExistingPath);
     checker = new IssuesChecker(settings.asConfig(), activeRules);
 
     Map previous = checker.getPrevious();
