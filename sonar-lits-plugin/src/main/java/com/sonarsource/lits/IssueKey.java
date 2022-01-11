@@ -19,10 +19,9 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.base.Objects;
-
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
+import java.util.Objects;
 
 @Immutable
 class IssueKey implements Comparable<IssueKey> {
@@ -34,7 +33,7 @@ class IssueKey implements Comparable<IssueKey> {
   IssueKey(String componentKey, String ruleKey, @Nullable Integer line) {
     this.componentKey = componentKey;
     this.ruleKey = ruleKey;
-    this.line = Objects.firstNonNull(line, 0);
+    this.line = line != null ? line : 0;
   }
 
   @Override
@@ -44,8 +43,8 @@ class IssueKey implements Comparable<IssueKey> {
     } else if (obj instanceof IssueKey) {
       IssueKey other = (IssueKey) obj;
       return this.line == other.line
-        && Objects.equal(this.componentKey, other.componentKey)
-        && Objects.equal(this.ruleKey, other.ruleKey);
+        && Objects.equals(this.componentKey, other.componentKey)
+        && Objects.equals(this.ruleKey, other.ruleKey);
     }
     return false;
   }
@@ -53,7 +52,7 @@ class IssueKey implements Comparable<IssueKey> {
   @Override
   public int hashCode() {
     // Godin: maybe would be better for performance to cache hash code
-    return Objects.hashCode(componentKey, ruleKey, line);
+    return Objects.hash(componentKey, ruleKey, line);
   }
 
   @Override
