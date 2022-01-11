@@ -23,7 +23,6 @@ import java.io.File;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
@@ -37,14 +36,12 @@ import org.sonar.api.utils.MessageException;
 import org.sonar.api.utils.log.LogTester;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.fest.assertions.Fail.fail;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class IssuesCheckerTest {
-
-  @org.junit.Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @org.junit.Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -71,27 +68,27 @@ public class IssuesCheckerTest {
   @Test
   public void path_must_be_specified() {
     Configuration settings = new MapSettings().asConfig();
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Missing property 'dump.old'");
-    new IssuesChecker(settings, activeRules);
+    MessageException e = assertThrows(MessageException.class, () ->
+      new IssuesChecker(settings, activeRules));
+    assertEquals("Missing property 'dump.old'", e.getMessage());
   }
 
   @Test
   public void path_must_be_absolute() {
     MapSettings settings = new MapSettings();
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Path must be absolute - check property 'dump.old'");
-    new IssuesChecker(settings.asConfig(), activeRules);
+    MessageException e = assertThrows(MessageException.class, () ->
+        new IssuesChecker(settings.asConfig(), activeRules));
+    assertEquals("Path must be absolute - check property 'dump.old'", e.getMessage());
   }
 
   @Test
   public void differences_file_must_be_specified() {
     MapSettings settings = newCorrectSettings();
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, (String) null);
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Missing property 'lits.differences'");
-    new IssuesChecker(settings.asConfig(), activeRules);
+    MessageException e = assertThrows(MessageException.class, () ->
+      new IssuesChecker(settings.asConfig(), activeRules));
+    assertEquals("Missing property 'lits.differences'", e.getMessage());
   }
 
   @Test
@@ -103,9 +100,9 @@ public class IssuesCheckerTest {
       .activate()
       .build();
 
-    thrown.expect(MessageException.class);
-    thrown.expectMessage("Rule 'repositoryKey:ruleKey' must be declared with severity INFO");
-    new IssuesChecker(settings, activeRules);
+    MessageException e = assertThrows(MessageException.class, () ->
+      new IssuesChecker(settings, activeRules));
+    assertEquals("Rule 'repositoryKey:ruleKey' must be declared with severity INFO", e.getMessage());
   }
 
   @Test
@@ -166,13 +163,10 @@ public class IssuesCheckerTest {
   @Test
   public void should_fail_when_inactive_rules() {
     checker.inactiveRule("squid:S00103");
-    try {
-      checker.save();
-      fail("Expected exception");
-    } catch (MessageException e) {
-      assertThat(e.getMessage()).isEqualTo("Inactive rules: squid:S00103");
-      assertThat(output).exists();
-    }
+    MessageException e = assertThrows(MessageException.class, () ->
+      checker.save());
+    assertThat(e.getMessage()).isEqualTo("Inactive rules: squid:S00103");
+    assertThat(output).exists();
   }
 
   @Test
@@ -193,13 +187,10 @@ public class IssuesCheckerTest {
   @Test
   public void should_fail_when_missing_resources() {
     checker.missingResource("missing_resource");
-    try {
-      checker.save();
-      fail("Expected exception");
-    } catch (MessageException e) {
-      assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: missing_resource");
-      assertThat(output).exists();
-    }
+    MessageException e = assertThrows(MessageException.class, () ->
+      checker.save());
+    assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: missing_resource");
+    assertThat(output).exists();
   }
 
   @Test
@@ -207,13 +198,10 @@ public class IssuesCheckerTest {
     checker.missingResource("first_missing");
     checker.missingResource("second_missing");
     checker.missingResource("third_missing");
-    try {
-      checker.save();
-      fail("Expected exception");
-    } catch (MessageException e) {
-      assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: first_missing, third_missing, second_missing");
-      assertThat(output).exists();
-    }
+    MessageException e = assertThrows(MessageException.class, () ->
+      checker.save());
+    assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: first_missing, third_missing, second_missing");
+    assertThat(output).exists();
   }
 
   private MapSettings newCorrectSettings() {
