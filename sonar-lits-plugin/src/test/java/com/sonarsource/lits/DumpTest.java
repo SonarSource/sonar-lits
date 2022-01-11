@@ -1,6 +1,6 @@
 /*
  * Sonar LITS Plugin
- * Copyright (C) 2013-2021 SonarSource SA
+ * Copyright (C) 2013-2022 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
@@ -23,7 +23,6 @@ import com.google.common.collect.Multiset;
 import com.google.common.io.Files;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -36,14 +35,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.fest.assertions.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 
 public class DumpTest {
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void save_load() throws Exception {
@@ -97,14 +94,19 @@ public class DumpTest {
 
   @Test
   public void unable_to_load() throws Exception {
-    thrown.expect(RuntimeException.class);
-    Dump.load(temporaryFolder.newFolder(), new HashMap<>());
+    File dir = temporaryFolder.newFolder();
+    HashMap<String, Multiset<IssueKey>> map = new HashMap<>();
+    assertThrows(RuntimeException.class, () ->
+      Dump.load(dir, map));
+
   }
 
   @Test
   public void unable_to_save() throws Exception {
-    thrown.expect(RuntimeException.class);
-    Dump.save(Collections.emptyList(), temporaryFolder.newFile());
+    File dir = temporaryFolder.newFile();
+    List<IssueKey> list = Collections.emptyList();
+    assertThrows(RuntimeException.class, () ->
+      Dump.save(list, dir));
   }
 
   @Test
