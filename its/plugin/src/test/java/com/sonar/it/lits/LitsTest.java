@@ -53,6 +53,7 @@ public class LitsTest {
 
   @ClassRule
   public static Orchestrator orchestrator = Orchestrator.builderEnv()
+    .useDefaultAdminCredentialsForBuilds(true)
     .setSonarVersion(System.getProperty("sonar.runtimeVersion"))
     .addPlugin(MavenLocation.of("org.sonarsource.java", "sonar-java-plugin", System.getProperty("javaVersion")))
     .addPlugin(FileLocation.byWildcardMavenFilename(new File("../../sonar-lits-plugin/target"), "sonar-lits-plugin-*.jar"))
