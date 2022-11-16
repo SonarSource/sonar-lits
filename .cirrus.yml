@@ -35,7 +35,6 @@ build_task:
   env:
     SIGN_KEY: VAULT[development/kv/data/sign data.key]
     PGP_PASSPHRASE: VAULT[development/kv/data/sign data.passphrase]
-    GITHUB_TOKEN: VAULT[development/github/token/SonarSource-sonar-lits-ro token]
     # analysis on next
     SONAR_TOKEN: VAULT[development/kv/data/next data.token]
     SONAR_HOST_URL: https://next.sonarqube.com/sonarqube
