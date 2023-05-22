@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 import com.google.common.io.Closeables;
+import java.nio.file.Files;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
@@ -45,6 +46,8 @@ import java.util.Map;
 class Dump {
 
   private static final String EXT = "json";
+  private static boolean componentInRule;
+  private static boolean issueInComponent;
 
   private Dump() {
   }
@@ -92,7 +95,7 @@ class Dump {
       throw Throwables.propagate(e);
     }
 
-    Collections.sort(issues, new IssueKeyComparator());
+    issues.sort(new IssueKeyComparator());
 
     PrintStream out = null;
     String prevRuleKey = null;
@@ -103,17 +106,16 @@ class Dump {
           endRule(out);
         }
         try {
-          out = new PrintStream(new FileOutputStream(new File(dir, ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
+          out = new PrintStream(Files.newOutputStream(new File(dir, ruleKeyToFileName(issueKey.ruleKey)).toPath()), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
         } catch (IOException e) {
           throw Throwables.propagate(e);
         }
-        out.print("{\n");
-        startComponent(out, issueKey.componentKey);
+        startRule(out, issueKey.componentKey);
       } else if (!issueKey.componentKey.equals(prevComponentKey)) {
         endComponent(out);
         startComponent(out, issueKey.componentKey);
       }
-      out.print(issueKey.line + ",\n");
+      printIssue(out, issueKey.line);
       prevComponentKey = issueKey.componentKey;
       prevRuleKey = issueKey.ruleKey;
     }
@@ -130,18 +132,33 @@ class Dump {
     return fileName.replaceFirst("-", ":").substring(0, fileName.length() - EXT.length() - 1);
   }
 
+  private static void startRule(PrintStream out, String componentKey) {
+    out.print("{");
+    componentInRule = false;
+    startComponent(out, componentKey);
+  }
+
   private static void startComponent(PrintStream out, String componentKey) {
-    out.print("'" + componentKey + "':[\n");
+    String separator = componentInRule ? "," : "";
+    out.print(separator + "\n  \"" + componentKey + "\": [");
+    componentInRule = true;
+    issueInComponent = false;
   }
 
   private static void endComponent(PrintStream out) {
-    out.print("],\n");
+    out.print("\n  ]");
   }
 
   private static void endRule(PrintStream out) {
     endComponent(out);
-    out.print("}\n");
+    out.print("\n}\n");
     Closeables.closeQuietly(out);
+  }
+
+  private static void printIssue(PrintStream out, int line) {
+    String separator = issueInComponent ? "," : "";
+    out.print(separator + "\n    " + line);
+    issueInComponent = true;
   }
 
   private static class IssueKeyComparator implements Comparator<IssueKey>, Serializable {
