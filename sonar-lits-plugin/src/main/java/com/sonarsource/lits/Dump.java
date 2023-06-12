@@ -46,8 +46,6 @@ import java.util.Map;
 class Dump {
 
   private static final String EXT = "json";
-  private static boolean componentInRule;
-  private static boolean issueInComponent;
 
   private Dump() {
   }
@@ -110,12 +108,16 @@ class Dump {
         } catch (IOException e) {
           throw Throwables.propagate(e);
         }
-        startRule(out, issueKey.componentKey);
+        out.print("{");
+        startComponent(out, issueKey.componentKey);
       } else if (!issueKey.componentKey.equals(prevComponentKey)) {
         endComponent(out);
+        out.print(",");
         startComponent(out, issueKey.componentKey);
+      } else {
+        out.print(",");
       }
-      printIssue(out, issueKey.line);
+      out.print("\n" + issueKey.line);
       prevComponentKey = issueKey.componentKey;
       prevRuleKey = issueKey.ruleKey;
     }
@@ -132,17 +134,8 @@ class Dump {
     return fileName.replaceFirst("-", ":").substring(0, fileName.length() - EXT.length() - 1);
   }
 
-  private static void startRule(PrintStream out, String componentKey) {
-    out.print("{");
-    componentInRule = false;
-    startComponent(out, componentKey);
-  }
-
   private static void startComponent(PrintStream out, String componentKey) {
-    String separator = componentInRule ? "," : "";
-    out.print(separator + "\n\"" + componentKey + "\": [");
-    componentInRule = true;
-    issueInComponent = false;
+    out.print("\n\"" + componentKey + "\": [");
   }
 
   private static void endComponent(PrintStream out) {
@@ -153,12 +146,6 @@ class Dump {
     endComponent(out);
     out.print("\n}\n");
     Closeables.closeQuietly(out);
-  }
-
-  private static void printIssue(PrintStream out, int line) {
-    String separator = issueInComponent ? "," : "";
-    out.print(separator + "\n" + line);
-    issueInComponent = true;
   }
 
   private static class IssueKeyComparator implements Comparator<IssueKey>, Serializable {
