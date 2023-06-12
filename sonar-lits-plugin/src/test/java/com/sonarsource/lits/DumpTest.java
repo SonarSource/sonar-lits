@@ -57,29 +57,29 @@ public class DumpTest {
     assertThat(dir.listFiles()).hasSize(3);
     String expected = new StringBuilder()
       .append("{\n")
-      .append("'componentKey1':[\n")
-      .append("1,\n")
+      .append("\"componentKey1\": [\n")
+      .append("1\n")
       .append("],\n")
-      .append("'componentKey2':[\n")
-      .append("1,\n")
-      .append("],\n")
+      .append("\"componentKey2\": [\n")
+      .append("1\n")
+      .append("]\n")
       .append("}\n")
       .toString();
     assertThat(Files.toString(new File(dir, "repoKey-ruleKey1.json"), StandardCharsets.UTF_8)).isEqualTo(expected);
     expected = new StringBuilder()
       .append("{\n")
-      .append("'componentKey1':[\n")
+      .append("\"componentKey1\": [\n")
       .append("1,\n")
-      .append("2,\n")
-      .append("],\n")
+      .append("2\n")
+      .append("]\n")
       .append("}\n")
       .toString();
     assertThat(Files.toString(new File(dir, "repoKey-ruleKey2.json"), StandardCharsets.UTF_8)).isEqualTo(expected);
     expected = new StringBuilder()
       .append("{\n")
-      .append("'componentKey1':[\n")
-      .append("1,\n")
-      .append("],\n")
+      .append("\"componentKey1\": [\n")
+      .append("1\n")
+      .append("]\n")
       .append("}\n")
       .toString();
     assertThat(Files.toString(new File(dir, "repoKey-rule-key3.json"), StandardCharsets.UTF_8)).isEqualTo(expected);

@@ -30,13 +30,12 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
+import java.nio.file.Files;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -92,7 +91,7 @@ class Dump {
       throw Throwables.propagate(e);
     }
 
-    Collections.sort(issues, new IssueKeyComparator());
+    issues.sort(new IssueKeyComparator());
 
     PrintStream out = null;
     String prevRuleKey = null;
@@ -103,17 +102,20 @@ class Dump {
           endRule(out);
         }
         try {
-          out = new PrintStream(new FileOutputStream(new File(dir, ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
+          out = new PrintStream(Files.newOutputStream(dir.toPath().resolve(ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
         } catch (IOException e) {
           throw Throwables.propagate(e);
         }
-        out.print("{\n");
+        out.print("{");
         startComponent(out, issueKey.componentKey);
       } else if (!issueKey.componentKey.equals(prevComponentKey)) {
         endComponent(out);
+        out.print(",");
         startComponent(out, issueKey.componentKey);
+      } else {
+        out.print(",");
       }
-      out.print(issueKey.line + ",\n");
+      out.print("\n" + issueKey.line);
       prevComponentKey = issueKey.componentKey;
       prevRuleKey = issueKey.ruleKey;
     }
@@ -131,16 +133,16 @@ class Dump {
   }
 
   private static void startComponent(PrintStream out, String componentKey) {
-    out.print("'" + componentKey + "':[\n");
+    out.print("\n\"" + componentKey + "\": [");
   }
 
   private static void endComponent(PrintStream out) {
-    out.print("],\n");
+    out.print("\n]");
   }
 
   private static void endRule(PrintStream out) {
     endComponent(out);
-    out.print("}\n");
+    out.print("\n}\n");
     Closeables.closeQuietly(out);
   }
 
