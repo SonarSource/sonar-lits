@@ -102,7 +102,7 @@ class Dump {
           endRule(out);
         }
         try {
-          out = new PrintStream(Files.newOutputStream(new File(dir, ruleKeyToFileName(issueKey.ruleKey)).toPath()), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
+          out = new PrintStream(Files.newOutputStream(dir.toPath().resolve(ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
         } catch (IOException e) {
           throw Throwables.propagate(e);
         }
