@@ -140,13 +140,13 @@ class Dump {
 
   private static void startComponent(PrintStream out, String componentKey) {
     String separator = componentInRule ? "," : "";
-    out.print(separator + "\n  \"" + componentKey + "\": [");
+    out.print(separator + "\n\"" + componentKey + "\": [");
     componentInRule = true;
     issueInComponent = false;
   }
 
   private static void endComponent(PrintStream out) {
-    out.print("\n  ]");
+    out.print("\n]");
   }
 
   private static void endRule(PrintStream out) {
@@ -157,7 +157,7 @@ class Dump {
 
   private static void printIssue(PrintStream out, int line) {
     String separator = issueInComponent ? "," : "";
-    out.print(separator + "\n    " + line);
+    out.print(separator + "\n" + line);
     issueInComponent = true;
   }
 
