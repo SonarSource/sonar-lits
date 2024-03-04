@@ -17,7 +17,7 @@
     <sonar.pluginName>LITS</sonar.pluginName>
     <sonar.pluginClass>com.sonarsource.lits.LITSPlugin</sonar.pluginClass>
 
-    <sonar.version>6.7</sonar.version>
+    <sonar.version>7.5</sonar.version>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
   </properties>
 
