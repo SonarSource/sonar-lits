@@ -1,6 +1,6 @@
 /*
  * Sonar LITS Plugin
- * Copyright (C) 2013-2022 SonarSource SA
+ * Copyright (C) 2013-2024 SonarSource SA
  * mailto:info AT sonarsource DOT com
  *
  * This program is free software; you can redistribute it and/or
