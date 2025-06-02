@@ -144,6 +144,7 @@ public class LitsTest {
     orchestrator.getServer().provisionProject(projectKey, projectKey);
     orchestrator.getServer().associateProjectToQualityProfile(projectKey, "java", "profile");
     return SonarScanner.create(projectDir)
+      .setProperty("sonar.scanner.skipJreProvisioning", "true")
       .setProjectKey(projectKey)
       .setProjectVersion("1")
       .setSourceDirs("src")
