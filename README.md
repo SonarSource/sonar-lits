@@ -1,6 +1,8 @@
 Sonar LITS
 ==========
 
+[![Build](https://github.com/SonarSource/sonar-lits/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/SonarSource/sonar-lits/actions/workflows/build.yml)
+
 ### License
 
 Copyright 2013-2022 SonarSource.
