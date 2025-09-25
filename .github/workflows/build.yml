@@ -48,41 +48,32 @@ jobs:
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2.4.4
         with:
           version: 2025.7.12
+      - uses: SonarSource/ci-github-actions/config-maven@master
+        with:
+          artifactory-reader-role: private-reader
       - name: Vault
         id: secrets
         uses: SonarSource/vault-action-wrapper@320bd31b03e5dacaac6be51bbbb15adf7caccc32 # v3.1.0
         with:
           secrets: |
             development/github/token/licenses-ro token | GITHUB_TOKEN;
-            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader username | ARTIFACTORY_USERNAME;
-            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_ACCESS_TOKEN;
-            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader username | ARTIFACTORY_DEPLOY_USERNAME;
-            development/artifactory/token/{REPO_OWNER_NAME_DASH}-private-reader access_token | ARTIFACTORY_DEPLOY_ACCESS_TOKEN;
-      - name: Maven configuration
-        shell: bash
-        run: |
-          MAVEN_CONFIG="$HOME/.m2"
-          mkdir -p "$MAVEN_CONFIG"
-          echo "MAVEN_CONFIG=${MAVEN_CONFIG}" >> "$GITHUB_ENV"
-          echo "Setting up private Maven settings $MAVEN_CONFIG/settings.xml"
-          cp "ci/settings-private.xml" "$MAVEN_CONFIG/settings.xml"
-          MAVEN_LOCAL_REPOSITORY="$HOME/.m2/repository"
-          mkdir -p "$MAVEN_LOCAL_REPOSITORY"
-          echo "MAVEN_LOCAL_REPOSITORY=${MAVEN_LOCAL_REPOSITORY}" >> "$GITHUB_ENV"
-          echo "MAVEN_SETTINGS=${MAVEN_CONFIG}/settings.xml" >> "$GITHUB_ENV"
-      - uses: SonarSource/ci-github-actions/get-build-number@v1
       - name: Run Plugin QA Tests
+        working-directory: its/plugin
         env:
           GITHUB_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).GITHUB_TOKEN }}
-          ARTIFACTORY_USERNAME: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_USERNAME }} # unused; present for backward compliance
-          ARTIFACTORY_ACCESS_USERNAME: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_USERNAME }} # deprecated, backward compliance
-          ARTIFACTORY_ACCESS_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }}
-          ARTIFACTORY_PASSWORD: ${{ fromJSON(steps.secrets.outputs.vault).ARTIFACTORY_ACCESS_TOKEN }} # deprecated, backward compliance
+          SONARSOURCE_REPOSITORY_URL: https://repox.jfrog.io/artifactory/sonarsource-qa
           SONARSOURCE_QA: true
         run: |
-          source ci/set_maven_build_version $BUILD_NUMBER
-          cd its/plugin
           mvn test -DjavaVersion="LATEST_RELEASE" -Dsonar.runtimeVersion=${{ matrix.sq_version }} -Dmaven.test.redirectTestOutputToFile=false -B -e -V
+      - name: Generate test report on failure
+        uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3 # v2.1.1
+        if: failure()
+        with:
+          name: Plugin QA Test Report
+          reporter: java-junit
+          path: its/plugin/**/target/surefire-reports/TEST-*.xml
+          list-suites: "failed"
+          list-tests: "failed"
 
   promote:
     needs: [ plugin_qa ]
