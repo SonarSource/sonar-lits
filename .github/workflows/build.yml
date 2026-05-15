@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: github-ubuntu-latest-s  # Public repo - uses github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04  # Public repo - uses warp-custom-ubuntu-24-04
     name: Build
     permissions:
       id-token: write  # Required for Vault OIDC authentication
@@ -35,7 +35,7 @@ jobs:
 
   plugin_qa:
     needs: [ build ]
-    runs-on: github-ubuntu-latest-s  # Public repo - uses github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04  # Public repo - uses warp-custom-ubuntu-24-04
     name: Plugin QA
     permissions:
       id-token: write
@@ -77,7 +77,7 @@ jobs:
 
   promote:
     needs: [ plugin_qa ]
-    runs-on: github-ubuntu-latest-s  # Public repo - uses github-ubuntu-latest-s
+    runs-on: warp-custom-ubuntu-24-04  # Public repo - uses warp-custom-ubuntu-24-04
     name: Promote
     permissions:
       id-token: write
