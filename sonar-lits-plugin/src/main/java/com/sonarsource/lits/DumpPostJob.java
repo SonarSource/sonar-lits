@@ -45,27 +45,30 @@ public class DumpPostJob implements PostJob {
   @Override
   public void execute(PostJobContext context) {
     for (Map.Entry<String, Multiset<IssueKey>> entry : checker.getPrevious().entrySet()) {
+      String componentKey = entry.getKey();
       Multiset<IssueKey> issues = entry.getValue();
-      if (issues.isEmpty()) {
-        continue;
-      }
-      if (!checker.isKnownResource(entry.getKey())) {
-        checker.missingResource(entry.getKey());
-        continue;
-      }
-
-      checker.different = true;
-      for (IssueKey issueKey : issues) {
-        RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
-        ActiveRule activeRule = activeRules.find(ruleKey);
-        if (activeRule == null) {
-          checker.inactiveRule(issueKey.ruleKey);
+      if (!issues.isEmpty()) {
+        if (!checker.isKnownResource(componentKey)) {
+          checker.missingResource(componentKey);
         } else {
-          checker.differences++;
+          countDifferences(issues);
+          issues.clear();
         }
       }
-      issues.clear();
     }
     checker.save();
+  }
+
+  private void countDifferences(Multiset<IssueKey> issues) {
+    checker.different = true;
+    for (IssueKey issueKey : issues) {
+      RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
+      ActiveRule activeRule = activeRules.find(ruleKey);
+      if (activeRule == null) {
+        checker.inactiveRule(issueKey.ruleKey);
+      } else {
+        checker.differences++;
+      }
+    }
   }
 }

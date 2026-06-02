@@ -23,7 +23,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.sonar.api.batch.fs.InputDir;
 import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.FileMetadata;
@@ -74,11 +73,16 @@ public class DumpPhaseTest {
     decorator.execute(sensorContext);
 
     InputFile inputFile = sensorContext.fileSystem().inputFiles(sensorContext.fileSystem().predicates().all()).iterator().next();
-    InputDir inputDir = sensorContext.fileSystem().inputDir(inputFile.file());
     verify(checker).knownResource(inputFile.key());
-    if (inputDir != null) {
-      verify(checker).knownResource(inputDir.key());
+    String parentKey = parentKey(inputFile.key());
+    if (parentKey != null) {
+      verify(checker).knownResource(parentKey);
     }
+  }
+
+  private static String parentKey(String componentKey) {
+    int lastSlash = componentKey.lastIndexOf('/');
+    return lastSlash >= 0 ? componentKey.substring(0, lastSlash) : null;
   }
 
 }

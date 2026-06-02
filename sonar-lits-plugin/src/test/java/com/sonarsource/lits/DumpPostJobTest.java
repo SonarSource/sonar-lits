@@ -90,10 +90,12 @@ public class DumpPostJobTest {
     ActiveRules activeRules = new ActiveRulesBuilder().build();
     IssuesChecker checker = new IssuesChecker(newSettings().asConfig(), activeRules);
     checker.knownResource("project:src/Example.java");
+    DumpPostJob postJob = new DumpPostJob(checker, activeRules);
+    PostJobContext postJobContext = mock(PostJobContext.class);
 
     MessageException e = assertThrows(
       MessageException.class,
-      () -> new DumpPostJob(checker, activeRules).execute(mock(PostJobContext.class))
+      () -> postJob.execute(postJobContext)
     );
 
     assertThat(e.getMessage()).isEqualTo("Inactive rules: squid:S00103");
@@ -112,10 +114,12 @@ public class DumpPostJobTest {
       .activate()
       .build();
     IssuesChecker checker = new IssuesChecker(newSettings().asConfig(), activeRules);
+    DumpPostJob postJob = new DumpPostJob(checker, activeRules);
+    PostJobContext postJobContext = mock(PostJobContext.class);
 
     MessageException e = assertThrows(
       MessageException.class,
-      () -> new DumpPostJob(checker, activeRules).execute(mock(PostJobContext.class))
+      () -> postJob.execute(postJobContext)
     );
 
     assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: project:src/Example.java");
