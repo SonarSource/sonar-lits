@@ -30,7 +30,7 @@ public class LITSPluginTest {
   public void test() {
     Plugin.Context context = new Plugin.Context(SonarRuntimeImpl.forSonarQube(Version.parse("6.7"), SonarQubeSide.SCANNER));
     new LITSPlugin().define(context);
-    assertThat(context.getExtensions()).containsOnly(IssuesChecker.class, DumpPhase.class);
+    assertThat(context.getExtensions()).containsOnly(IssuesChecker.class, DumpPhase.class, DumpPostJob.class);
   }
 
 }

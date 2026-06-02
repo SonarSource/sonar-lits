@@ -16,37 +16,28 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Multiset;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.fs.InputDir;
+import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.FileMetadata;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
-import org.sonar.api.batch.rule.ActiveRules;
-import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
 import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
-import org.sonar.api.rule.RuleKey;
 
 import static org.fest.assertions.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class DumpPhaseTest {
 
   private IssuesChecker checker;
-  private ActiveRules activeRules;
   private DumpPhase decorator;
 
   @Rule
@@ -57,8 +48,7 @@ public class DumpPhaseTest {
   @Before
   public void setup() throws IOException {
     checker = mock(IssuesChecker.class);
-    activeRules = new ActiveRulesBuilder().build();
-    decorator = new DumpPhase(checker, activeRules);
+    decorator = new DumpPhase(checker);
 
     sensorContext = SensorContextTester.create(new File("src/test/resources"));
     DefaultFileSystem fs = new DefaultFileSystem(new File("src/test/resources"));
@@ -80,41 +70,15 @@ public class DumpPhaseTest {
   }
 
   @Test
-  public void should_save_on_project() {
-    when(checker.getByComponentKey(anyString())).thenReturn(HashMultiset.<IssueKey>create());
-
-    decorator.save();
-
-    verify(checker).save();
-  }
-
-  @Test
-  public void should_report_missing_issues() {
-    Multiset<IssueKey> issues = HashMultiset.create();
-    issues.add(new IssueKey("", "squid:S00103", null));
-    issues.add(new IssueKey("", "squid:S00104", null));
-    when(checker.getByComponentKey(anyString())).thenReturn(issues);
-
-    activeRules = new ActiveRulesBuilder().create(RuleKey.of("squid", "S00103")).activate().build();
-    decorator = new DumpPhase(checker, activeRules);
-
+  public void should_collect_known_resources() {
     decorator.execute(sensorContext);
 
-    assertThat(sensorContext.allIssues()).hasSize(1);
-  }
-
-  @Test
-  public void should_report_missing_files() {
-    Map<String, Multiset<IssueKey>> previous = new HashMap<>();
-    Multiset<IssueKey> issues = HashMultiset.create();
-    issues.add(new IssueKey("", "squid:S00103", null));
-    previous.put("missing", issues);
-    when(checker.getPrevious()).thenReturn(previous);
-    when(checker.getByComponentKey(anyString())).thenReturn(ImmutableMultiset.<IssueKey>of());
-
-    decorator.save();
-
-    verify(checker).missingResource("missing");
+    InputFile inputFile = sensorContext.fileSystem().inputFiles(sensorContext.fileSystem().predicates().all()).iterator().next();
+    InputDir inputDir = sensorContext.fileSystem().inputDir(inputFile.file());
+    verify(checker).knownResource(inputFile.key());
+    if (inputDir != null) {
+      verify(checker).knownResource(inputDir.key());
+    }
   }
 
 }

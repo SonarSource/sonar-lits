@@ -65,6 +65,7 @@ public class IssuesChecker implements IssueFilter {
 
   private final Set<String> inactiveRules = new HashSet<>();
   private final Set<String> missingResources = new HashSet<>();
+  private final Set<String> knownResources = new HashSet<>();
 
   boolean different = false;
   boolean disabled = false;
@@ -132,6 +133,14 @@ public class IssuesChecker implements IssueFilter {
   void inactiveRule(String ruleKey) {
     different = true;
     inactiveRules.add(ruleKey);
+  }
+
+  void knownResource(String componentKey) {
+    knownResources.add(componentKey);
+  }
+
+  boolean isKnownResource(String componentKey) {
+    return knownResources.contains(componentKey);
   }
 
   void missingResource(String componentKey) {
