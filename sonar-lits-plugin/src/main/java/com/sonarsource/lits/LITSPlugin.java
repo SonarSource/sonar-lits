@@ -26,7 +26,7 @@ public class LITSPlugin implements Plugin {
 
   @Override
   public void define(Context context) {
-    context.addExtensions(IssuesChecker.class, DumpPhase.class, DumpPostJob.class);
+    context.addExtensions(IssuesChecker.class, DumpPhase.class);
   }
 
 }

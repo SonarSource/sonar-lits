@@ -40,10 +40,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static java.util.Collections.singletonList;
 import static org.fest.assertions.Assertions.assertThat;
@@ -84,7 +82,8 @@ public class LitsTest {
     assertThat(output).exists();
     assertThat(read(differences)).isEqualTo("Issues differences: 2");
 
-    assertThat(getIssuesMeasure(projectKey)).isEqualTo(1);
+    assertThat(getIssuesMeasure(projectKey)).isEqualTo(2);
+    assertThat(issue(projectKey, "BLOCKER").getLine()).isEqualTo(3);
     assertThat(issue(projectKey, "INFO").getLine()).isEqualTo(2);
   }
 
@@ -122,8 +121,7 @@ public class LitsTest {
 
     assertThat(output).exists();
     assertThat(read(differences)).isEqualTo("Issues differences: 3");
-    assertThat(getIssuesMeasure(projectKey)).isEqualTo(2);
-    assertThat(issueLines(projectKey, "INFO")).isEqualTo(Arrays.asList(1, 2));
+    assertThat(issue(projectKey, "BLOCKER").getLine()).isEqualTo(0);
   }
 
   @Test
@@ -175,13 +173,6 @@ public class LitsTest {
       .setSeverities(Collections.singletonList(severity))
       .setComponentKeys(singletonList(componentKey))
     ).getIssuesList();
-  }
-
-  private static List<Integer> issueLines(String componentKey, String severity) {
-    return issues(componentKey, severity).stream()
-      .map(Issues.Issue::getLine)
-      .sorted()
-      .collect(Collectors.toList());
   }
 
   private static Integer getIssuesMeasure(String projectKey) {
