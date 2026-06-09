@@ -29,16 +29,16 @@ import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.rule.ActiveRule;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.rule.Severity;
-import org.sonar.api.batch.sensor.Sensor;
 import org.sonar.api.batch.sensor.SensorContext;
 import org.sonar.api.batch.sensor.SensorDescriptor;
 import org.sonar.api.batch.sensor.issue.NewIssue;
 import org.sonar.api.batch.sensor.issue.NewIssueLocation;
 import org.sonar.api.rule.RuleKey;
+import org.sonar.api.scanner.sensor.ProjectSensor;
 
 // must be public for SQ picocontainer
 @Phase(name = Phase.Name.POST)
-public class DumpPhase implements Sensor {
+public class DumpPhase implements ProjectSensor {
 
   private final IssuesChecker checker;
   private final ActiveRules activeRules;
@@ -51,14 +51,11 @@ public class DumpPhase implements Sensor {
 
   @Override
   public void describe(SensorDescriptor descriptor) {
-    descriptor
-      .name("LITS")
-      .global();
+    descriptor.name("LITS");
   }
 
   @Override
   public void execute(SensorContext context) {
-    // disable IssueFilter
     checker.disabled = true;
     Set<InputDir> inputDirs = new HashSet<>();
     FileSystem fs = context.fileSystem();
@@ -79,12 +76,10 @@ public class DumpPhase implements Sensor {
     if (!componentIssues.isEmpty()) {
       checker.disabled = true;
       for (IssueKey issueKey : checker.getByComponentKey(resource.key())) {
-        // missing issue => create
         checker.different = true;
         RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
         ActiveRule activeRule = activeRules.find(ruleKey);
         if (activeRule == null) {
-          // rule not active => skip it
           checker.inactiveRule(issueKey.ruleKey);
           continue;
         }

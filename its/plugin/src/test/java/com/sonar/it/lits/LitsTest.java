@@ -38,6 +38,8 @@ import org.sonarqube.ws.client.measures.ComponentRequest;
 import javax.annotation.CheckForNull;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.List;
 
@@ -64,10 +66,12 @@ public class LitsTest {
   @Before
   public void before() throws Exception {
     output = new File(temporaryFolder.newFolder(), "dump");
+    differences = temporaryFolder.newFile("differences");
   }
 
   private final File projectDir = new File("src/test/project/").getAbsoluteFile();
   private File output = null;
+  private File differences = null;
 
   @Test
   public void differences() throws Exception {
@@ -76,6 +80,7 @@ public class LitsTest {
     orchestrator.executeBuild(build);
 
     assertThat(output).exists();
+    assertThat(read(differences)).isEqualTo("Issues differences: 2");
 
     assertThat(getIssuesMeasure(projectKey)).isEqualTo(2);
     assertThat(issue(projectKey, "BLOCKER").getLine()).isEqualTo(3);
@@ -115,7 +120,7 @@ public class LitsTest {
     orchestrator.executeBuild(build);
 
     assertThat(output).exists();
-
+    assertThat(read(differences)).isEqualTo("Issues differences: 3");
     assertThat(issue(projectKey, "BLOCKER").getLine()).isEqualTo(0);
   }
 
@@ -153,7 +158,7 @@ public class LitsTest {
       .setSourceDirs("src")
       .setProperty("sonar.lits.dump.old", new File(projectDir, dumpOld).toString())
       .setProperty("sonar.lits.dump.new", output.toString())
-      .setProperty("sonar.lits.differences", temporaryFolder.newFile("differences").getAbsolutePath())
+      .setProperty("sonar.lits.differences", differences.getAbsolutePath())
       .setProperty("sonar.cpd.skip", "true");
   }
 
@@ -193,6 +198,14 @@ public class LitsTest {
     return WsClientFactories.getDefault().newClient(HttpConnector.newBuilder()
       .url(orchestrator.getServer().getUrl())
       .build());
+  }
+
+  private static String read(File file) {
+    try {
+      return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+    } catch (IOException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
 }

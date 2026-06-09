@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
+import org.sonar.api.batch.rule.internal.NewActiveRule;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.config.internal.MapSettings;
 import org.sonar.api.rule.RuleKey;
@@ -93,9 +94,10 @@ public class IssuesCheckerTest {
   public void should_fail_when_incorrect_severity() {
     Configuration settings = newCorrectSettings().asConfig();
     activeRules = new ActiveRulesBuilder()
-      .create(RuleKey.of("repositoryKey", "ruleKey"))
-      .setSeverity(RulePriority.BLOCKER.toString())
-      .activate()
+      .addRule(new NewActiveRule.Builder()
+        .setRuleKey(RuleKey.of("repositoryKey", "ruleKey"))
+        .setSeverity(RulePriority.BLOCKER.toString())
+        .build())
       .build();
 
     MessageException e = assertThrows(MessageException.class, () ->

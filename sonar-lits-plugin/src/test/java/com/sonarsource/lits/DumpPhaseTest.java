@@ -33,6 +33,7 @@ import org.sonar.api.batch.fs.internal.FileMetadata;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.rule.internal.ActiveRulesBuilder;
+import org.sonar.api.batch.rule.internal.NewActiveRule;
 import org.sonar.api.batch.sensor.internal.DefaultSensorDescriptor;
 import org.sonar.api.batch.sensor.internal.SensorContextTester;
 import org.sonar.api.rule.RuleKey;
@@ -76,7 +77,7 @@ public class DumpPhaseTest {
     DefaultSensorDescriptor descriptor = new DefaultSensorDescriptor();
     decorator.describe(descriptor);
     assertThat(descriptor.name()).isEqualTo("LITS");
-    assertThat(descriptor.isGlobal()).isTrue();
+    assertThat(descriptor.isGlobal()).isFalse();
   }
 
   @Test
@@ -95,7 +96,11 @@ public class DumpPhaseTest {
     issues.add(new IssueKey("", "squid:S00104", null));
     when(checker.getByComponentKey(anyString())).thenReturn(issues);
 
-    activeRules = new ActiveRulesBuilder().create(RuleKey.of("squid", "S00103")).activate().build();
+    activeRules = new ActiveRulesBuilder()
+      .addRule(new NewActiveRule.Builder()
+        .setRuleKey(RuleKey.of("squid", "S00103"))
+        .build())
+      .build();
     decorator = new DumpPhase(checker, activeRules);
 
     decorator.execute(sensorContext);

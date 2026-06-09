@@ -28,7 +28,7 @@ public class LITSPluginTest {
 
   @Test
   public void test() {
-    Plugin.Context context = new Plugin.Context(SonarRuntimeImpl.forSonarQube(Version.parse("6.7"), SonarQubeSide.SCANNER));
+    Plugin.Context context = new Plugin.Context(SonarRuntimeImpl.forSonarQube(Version.parse("7.6"), SonarQubeSide.SCANNER));
     new LITSPlugin().define(context);
     assertThat(context.getExtensions()).containsOnly(IssuesChecker.class, DumpPhase.class);
   }
