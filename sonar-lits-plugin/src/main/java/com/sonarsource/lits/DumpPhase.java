@@ -56,6 +56,7 @@ public class DumpPhase implements ProjectSensor {
 
   @Override
   public void execute(SensorContext context) {
+    // disable IssueFilter
     checker.disabled = true;
     Set<InputDir> inputDirs = new HashSet<>();
     FileSystem fs = context.fileSystem();
@@ -76,10 +77,12 @@ public class DumpPhase implements ProjectSensor {
     if (!componentIssues.isEmpty()) {
       checker.disabled = true;
       for (IssueKey issueKey : checker.getByComponentKey(resource.key())) {
+        // missing issue => create
         checker.different = true;
         RuleKey ruleKey = RuleKey.parse(issueKey.ruleKey);
         ActiveRule activeRule = activeRules.find(ruleKey);
         if (activeRule == null) {
+          // rule not active => skip it
           checker.inactiveRule(issueKey.ruleKey);
           continue;
         }
