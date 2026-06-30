@@ -18,4 +18,4 @@ jobs:
       version: ${{ inputs.version }}
       publishToBinaries: true
       mavenCentralSync: true
-      slackChannel: team-lang-cfamily
+      slackChannel: squad-corelang-releases
