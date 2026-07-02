@@ -66,7 +66,7 @@ jobs:
         run: |
           mvn test -DjavaVersion="LATEST_RELEASE" -Dsonar.runtimeVersion=${{ matrix.sq_version }} -Dmaven.test.redirectTestOutputToFile=false -B -e -V
       - name: Generate test report on failure
-        uses: dorny/test-reporter@dc3a92680fcc15842eef52e8c4606ea7ce6bd3f3 # v2.1.1
+        uses: dorny/test-reporter@df6247429542221bc30d46a036ee47af1102c451 # v2.7.0
         if: failure()
         with:
           name: Plugin QA Test Report
