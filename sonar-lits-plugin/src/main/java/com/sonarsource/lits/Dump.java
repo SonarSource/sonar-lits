@@ -19,7 +19,6 @@ package com.sonarsource.lits;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import com.google.common.io.Closeables;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
@@ -140,7 +139,7 @@ class Dump {
   private static void endRule(PrintStream out) {
     endComponent(out);
     out.print("\n}\n");
-    Closeables.closeQuietly(out);
+    out.close();
   }
 
   private static class IssueKeyComparator implements Comparator<IssueKey>, Serializable {
