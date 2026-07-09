@@ -16,8 +16,6 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Multiset;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -71,7 +69,6 @@ public class DumpPhase implements ProjectSensor {
     save();
   }
 
-  @VisibleForTesting
   private void createMissingIssues(SensorContext context, InputComponent resource) {
     Multiset<IssueKey> componentIssues = checker.getByComponentKey(resource.key());
     if (!componentIssues.isEmpty()) {
@@ -105,7 +102,6 @@ public class DumpPhase implements ProjectSensor {
     }
   }
 
-  @VisibleForTesting
   void save() {
     for (Map.Entry<String, Multiset<IssueKey>> entry : checker.getPrevious().entrySet()) {
       if (!entry.getValue().isEmpty()) {
