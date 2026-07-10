@@ -16,9 +16,6 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Multiset;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -82,7 +79,7 @@ public class DumpPhaseTest {
 
   @Test
   public void should_save_on_project() {
-    when(checker.getByComponentKey(anyString())).thenReturn(HashMultiset.<IssueKey>create());
+    when(checker.getByComponentKey(anyString())).thenReturn(Multiset.<IssueKey>create());
 
     decorator.save();
 
@@ -91,7 +88,7 @@ public class DumpPhaseTest {
 
   @Test
   public void should_report_missing_issues() {
-    Multiset<IssueKey> issues = HashMultiset.create();
+    Multiset<IssueKey> issues = Multiset.create();
     issues.add(new IssueKey("", "squid:S00103", null));
     issues.add(new IssueKey("", "squid:S00104", null));
     when(checker.getByComponentKey(anyString())).thenReturn(issues);
@@ -111,11 +108,11 @@ public class DumpPhaseTest {
   @Test
   public void should_report_missing_files() {
     Map<String, Multiset<IssueKey>> previous = new HashMap<>();
-    Multiset<IssueKey> issues = HashMultiset.create();
+    Multiset<IssueKey> issues = Multiset.create();
     issues.add(new IssueKey("", "squid:S00103", null));
     previous.put("missing", issues);
     when(checker.getPrevious()).thenReturn(previous);
-    when(checker.getByComponentKey(anyString())).thenReturn(ImmutableMultiset.<IssueKey>of());
+    when(checker.getByComponentKey(anyString())).thenReturn(Multiset.<IssueKey>empty());
 
     decorator.save();
 

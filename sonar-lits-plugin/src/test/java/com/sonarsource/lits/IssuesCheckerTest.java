@@ -18,6 +18,8 @@ package com.sonarsource.lits;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
@@ -161,6 +163,18 @@ public class IssuesCheckerTest {
   }
 
   @Test
+  public void should_fail_when_previous_issue_is_not_info() {
+    FilterableIssue issue = mock(FilterableIssue.class);
+    when(issue.componentKey()).thenReturn("project:src/Example.java");
+    when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
+    when(issue.line()).thenReturn(1);
+    when(issue.severity()).thenReturn("BLOCKER");
+
+    assertThrows(IllegalStateException.class, () ->
+      checker.accept(issue, chainReturnTrue));
+  }
+
+  @Test
   public void should_fail_when_inactive_rules() {
     checker.inactiveRule("squid:S00103");
     MessageException e = assertThrows(MessageException.class, () ->
@@ -193,6 +207,20 @@ public class IssuesCheckerTest {
       checker.save());
     assertThat(e.getMessage()).isEqualTo("Files listed in Expected directory were not analyzed: missing_resource");
     assertThat(output).exists();
+  }
+
+  @Test
+  public void should_delete_existing_output_and_difference_artifacts() throws Exception {
+    File nestedDirectory = new File(output, "nested");
+    assertThat(nestedDirectory.mkdirs()).isTrue();
+    Files.write(new File(nestedDirectory, "stale.txt").toPath(), "stale".getBytes(StandardCharsets.UTF_8));
+    Files.write(assertion.toPath(), "old".getBytes(StandardCharsets.UTF_8));
+
+    checker.save();
+
+    assertThat(output).doesNotExist();
+    assertThat(assertion).exists();
+    assertThat(Files.readAllBytes(assertion.toPath())).isEmpty();
   }
 
   @Test

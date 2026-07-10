@@ -16,14 +16,9 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.base.Throwables;
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
-import com.google.common.io.Closeables;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
-import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -31,12 +26,16 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 class Dump {
 
@@ -47,7 +46,7 @@ class Dump {
 
   static Map<String, Multiset<IssueKey>> load(File dir) {
     Map<String, Multiset<IssueKey>> result = new HashMap<>();
-    for (File file : FileUtils.listFiles(dir, new String[]{EXT}, false)) {
+    for (File file : listJsonFiles(dir.toPath())) {
       load(file, result);
     }
     return result;
@@ -61,7 +60,7 @@ class Dump {
     ) {
       json = (JSONObject) JSONValue.parse(in);
     } catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new UncheckedIOException(e);
     }
 
     String ruleKey = ruleKeyFromFileName(file.getName());
@@ -70,7 +69,7 @@ class Dump {
 
       Multiset<IssueKey> issues = result.get(componentKey);
       if (issues == null) {
-        issues = HashMultiset.create();
+        issues = Multiset.create();
         result.put(componentKey, issues);
       }
 
@@ -83,9 +82,9 @@ class Dump {
 
   static void save(List<IssueKey> issues, File dir) {
     try {
-      FileUtils.forceMkdir(dir);
+      Files.createDirectories(dir.toPath());
     } catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new UncheckedIOException(e);
     }
 
     issues.sort(new IssueKeyComparator());
@@ -101,7 +100,7 @@ class Dump {
         try {
           out = new PrintStream(Files.newOutputStream(dir.toPath().resolve(ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
         } catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new UncheckedIOException(e);
         }
         out.print("{");
         startComponent(out, issueKey.componentKey);
@@ -140,7 +139,20 @@ class Dump {
   private static void endRule(PrintStream out) {
     endComponent(out);
     out.print("\n}\n");
-    Closeables.closeQuietly(out);
+    out.close();
+  }
+
+  private static List<File> listJsonFiles(Path dir) {
+    try (Stream<Path> paths = Files.list(dir)) {
+      List<File> files = new ArrayList<>();
+      paths
+        .filter(Files::isRegularFile)
+        .filter(path -> path.getFileName().toString().endsWith("." + EXT))
+        .forEach(path -> files.add(path.toFile()));
+      return files;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   private static class IssueKeyComparator implements Comparator<IssueKey>, Serializable {
