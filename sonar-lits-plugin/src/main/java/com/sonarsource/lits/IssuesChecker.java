@@ -16,22 +16,20 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Multiset;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.commons.io.FileUtils;
+import java.util.stream.Collectors;
 import org.sonar.api.batch.rule.ActiveRule;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.config.Configuration;
@@ -87,7 +85,7 @@ public class IssuesChecker implements IssueFilter {
     if (previous == null) {
       if (!oldDumpFile.isDirectory()) {
         LOG.warn("Directory not found: {}", oldDumpFile);
-        previous = ImmutableMap.of();
+        previous = Collections.emptyMap();
       } else {
         LOG.info("Loading {}", oldDumpFile);
         previous = Dump.load(oldDumpFile);
@@ -99,7 +97,7 @@ public class IssuesChecker implements IssueFilter {
   Multiset<IssueKey> getByComponentKey(String componentKey) {
     Multiset<IssueKey> issueKeys = getPrevious().get(componentKey);
     if (issueKeys == null) {
-      issueKeys = ImmutableMultiset.of();
+      issueKeys = Multiset.empty();
     }
     return issueKeys;
   }
@@ -119,7 +117,9 @@ public class IssuesChecker implements IssueFilter {
     if (componentIssues.contains(issueKey)) {
       // old issue => no need to persist
       componentIssues.remove(issueKey);
-      Preconditions.checkState(Severity.INFO.equals(issue.severity()));
+      if (!Severity.INFO.equals(issue.severity())) {
+        throw new IllegalStateException();
+      }
       return false;
     } else {
       // new issue => persist
@@ -142,10 +142,20 @@ public class IssuesChecker implements IssueFilter {
   private static void forceDelete(File file) {
     if (file.exists()) {
       try {
-        FileUtils.forceDelete(file);
+        deleteRecursively(file.toPath());
       } catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new UncheckedIOException(e);
       }
+    }
+  }
+
+  private static void deleteRecursively(Path path) throws IOException {
+    List<Path> paths;
+    try (java.util.stream.Stream<Path> stream = Files.walk(path)) {
+      paths = stream.sorted(Comparator.reverseOrder()).collect(Collectors.toList());
+    }
+    for (Path current : paths) {
+      Files.deleteIfExists(current);
     }
   }
 
@@ -161,21 +171,21 @@ public class IssuesChecker implements IssueFilter {
       LOG.info("No differences in issues");
     }
     if (!inactiveRules.isEmpty()) {
-      String message = "Inactive rules: " + Joiner.on(", ").join(inactiveRules);
+      String message = "Inactive rules: " + String.join(", ", inactiveRules);
       messages.add(message);
       exception = MessageException.of(message);
     }
     if (!missingResources.isEmpty()) {
-      String message = "Files listed in Expected directory were not analyzed: " + Joiner.on(", ").join(missingResources);
+      String message = "Files listed in Expected directory were not analyzed: " + String.join(", ", missingResources);
       messages.add(message);
       exception = MessageException.of(message);
     }
     forceDelete(differencesFile);
     try {
       differencesFile.createNewFile();
-      Files.write(differencesFile.toPath(), Joiner.on("\n").join(messages).getBytes(StandardCharsets.UTF_8));
+      Files.write(differencesFile.toPath(), String.join("\n", messages).getBytes(StandardCharsets.UTF_8));
     } catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new UncheckedIOException(e);
     }
     if (exception != null) {
       throw exception;

@@ -16,8 +16,6 @@
  */
 package com.sonarsource.lits;
 
-import com.google.common.collect.Multiset;
-import com.google.common.io.Files;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -25,6 +23,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -62,7 +61,7 @@ public class DumpTest {
       .append("]\n")
       .append("}\n")
       .toString();
-    assertThat(Files.toString(new File(dir, "repoKey-ruleKey1.json"), StandardCharsets.UTF_8)).isEqualTo(expected);
+    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
     expected = new StringBuilder()
       .append("{\n")
       .append("\"componentKey1\": [\n")
@@ -71,7 +70,7 @@ public class DumpTest {
       .append("]\n")
       .append("}\n")
       .toString();
-    assertThat(Files.toString(new File(dir, "repoKey-ruleKey2.json"), StandardCharsets.UTF_8)).isEqualTo(expected);
+    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey2.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
     expected = new StringBuilder()
       .append("{\n")
       .append("\"componentKey1\": [\n")
@@ -79,7 +78,7 @@ public class DumpTest {
       .append("]\n")
       .append("}\n")
       .toString();
-    assertThat(Files.toString(new File(dir, "repoKey-rule-key3.json"), StandardCharsets.UTF_8)).isEqualTo(expected);
+    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-rule-key3.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
     System.out.println(dump);
