@@ -35,14 +35,10 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.22.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>33.6.0-jre</version>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>3.0.2</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>net.minidev</groupId>
@@ -119,7 +115,7 @@
               <rules>
                 <requireFilesSize>
                   <maxsize>1000000</maxsize>
-                  <minsize>900000</minsize>
+                  <minsize>80000</minsize>
                   <files>
                     <file>${project.build.directory}/${project.build.finalName}.jar</file>
                   </files>
