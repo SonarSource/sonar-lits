@@ -17,15 +17,14 @@
     <sonar.pluginName>LITS</sonar.pluginName>
     <sonar.pluginClass>com.sonarsource.lits.LITSPlugin</sonar.pluginClass>
 
-    <sonar.version>7.6</sonar.version>
     <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>org.sonarsource.sonarqube</groupId>
+      <groupId>org.sonarsource.api.plugin</groupId>
       <artifactId>sonar-plugin-api</artifactId>
-      <version>${sonar.version}</version>
+      <version>${sonar.plugin.api.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -48,9 +47,28 @@
 
     <!-- unit tests -->
     <dependency>
-      <groupId>org.sonarsource.sonarqube</groupId>
-      <artifactId>sonar-testing-harness</artifactId>
-      <version>${sonar.version}</version>
+      <groupId>org.sonarsource.api.plugin</groupId>
+      <artifactId>sonar-plugin-api-test-fixtures</artifactId>
+      <version>${sonar.plugin.api.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.sonarsource.scanner.engine</groupId>
+      <artifactId>plugin-api-scanner-impl</artifactId>
+      <version>${scanner.engine.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.sonarsource.scanner.engine</groupId>
+      <artifactId>sensor-test-fixtures</artifactId>
+      <version>${scanner.engine.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- sonar-plugin-api-test-fixtures brings Logback 1.2, which is incompatible with SLF4J 2. -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.5.38</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -79,6 +97,7 @@
         <groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId>
         <artifactId>sonar-packaging-maven-plugin</artifactId>
         <configuration>
+          <pluginApiMinVersion>${sonar.plugin.api.min.version}</pluginApiMinVersion>
           <skipDependenciesPackaging>true</skipDependenciesPackaging>
         </configuration>
       </plugin>
