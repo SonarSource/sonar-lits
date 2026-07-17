@@ -97,6 +97,7 @@
         <groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId>
         <artifactId>sonar-packaging-maven-plugin</artifactId>
         <configuration>
+          <pluginApiMinVersion>${sonar.plugin.api.min.version}</pluginApiMinVersion>
           <skipDependenciesPackaging>true</skipDependenciesPackaging>
         </configuration>
       </plugin>
