@@ -45,7 +45,7 @@
   <properties>
     <sonar.plugin.api.version>13.8.0.4399</sonar.plugin.api.version>
     <sonar.plugin.api.min.version>7.6</sonar.plugin.api.min.version>
-    <scanner.engine.version>13.4.1.4007</scanner.engine.version>
+    <scanner.engine.version>13.5.0.4089</scanner.engine.version>
     <!-- used for deployment to SonarSource Artifactory -->
     <gitRepositoryName>sonar-lits</gitRepositoryName>
     <!-- Release: enable publication to Bintray -->
