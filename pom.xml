@@ -43,7 +43,7 @@
   </issueManagement>
 
   <properties>
-    <sonar.plugin.api.version>13.8.0.4399</sonar.plugin.api.version>
+    <sonar.plugin.api.version>13.9.0.4428</sonar.plugin.api.version>
     <sonar.plugin.api.min.version>7.6</sonar.plugin.api.min.version>
     <scanner.engine.version>13.5.0.4089</scanner.engine.version>
     <!-- used for deployment to SonarSource Artifactory -->
