@@ -116,31 +116,40 @@ class Dump {
         if (out != null) {
           endRule(out);
         }
-        try {
-          out = new PrintStream(Files.newOutputStream(dir.toPath().resolve(ruleKeyToFileName(issueKey.ruleKey))), true, StandardCharsets.UTF_8.name());
-        } catch (IOException e) {
-          throw new UncheckedIOException(e);
-        }
-        out.print("{\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\",\"version\":\"2.1.0\",\"runs\":[{\"tool\":{\"driver\":{\"name\":\"LITS\"}},\"results\":[");
+        out = startRule(dir, issueKey.ruleKey);
       } else {
         out.print(",");
       }
-      out.print("{\"ruleId\":");
-      out.print(JSONValue.toJSONString(issueKey.ruleKey));
-      out.print(",\"message\":{\"text\":");
-      out.print(JSONValue.toJSONString(issueKey.message == null ? "Issue" : issueKey.message));
-      out.print("},\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":");
-      out.print(JSONValue.toJSONString(issueKey.componentKey));
-      out.print("}");
-      if (issueKey.line != 0) {
-        out.print(",\"region\":{\"startLine\":" + issueKey.line + ",\"endLine\":" + issueKey.line + "}");
-      }
-      out.print("}}]}");
+      writeIssue(out, issueKey);
       prevRuleKey = issueKey.ruleKey;
     }
     if (out != null) {
       endRule(out);
     }
+  }
+
+  private static PrintStream startRule(File dir, String ruleKey) {
+    try {
+      PrintStream out = new PrintStream(Files.newOutputStream(dir.toPath().resolve(ruleKeyToFileName(ruleKey))), true, StandardCharsets.UTF_8.name());
+      out.print("{\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\",\"version\":\"2.1.0\",\"runs\":[{\"tool\":{\"driver\":{\"name\":\"LITS\"}},\"results\":[");
+      return out;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  private static void writeIssue(PrintStream out, IssueKey issueKey) {
+    out.print("{\"ruleId\":");
+    out.print(JSONValue.toJSONString(issueKey.ruleKey));
+    out.print(",\"message\":{\"text\":");
+    out.print(JSONValue.toJSONString(issueKey.message == null ? "Issue" : issueKey.message));
+    out.print("},\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":");
+    out.print(JSONValue.toJSONString(issueKey.componentKey));
+    out.print("}");
+    if (issueKey.line != 0) {
+      out.print(",\"region\":{\"startLine\":" + issueKey.line + ",\"endLine\":" + issueKey.line + "}");
+    }
+    out.print("}}]}");
   }
 
   private static String ruleKeyToFileName(String ruleKey) {
