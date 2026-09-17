@@ -64,18 +64,37 @@ class Dump {
     }
 
     String ruleKey = ruleKeyFromFileName(file.getName());
+    if (json.containsKey("version") && json.containsKey("runs")) {
+      loadSarif(json, result);
+    } else {
+      loadLegacy(json, ruleKey, result);
+    }
+  }
+
+  private static void loadLegacy(JSONObject json, String ruleKey, Map<String, Multiset<IssueKey>> result) {
     for (Map.Entry<String, Object> component : json.entrySet()) {
       String componentKey = component.getKey();
-
-      Multiset<IssueKey> issues = result.get(componentKey);
-      if (issues == null) {
-        issues = Multiset.create();
-        result.put(componentKey, issues);
-      }
-
-      JSONArray lines = (JSONArray) component.getValue();
-      for (Object line : lines) {
+      Multiset<IssueKey> issues = result.computeIfAbsent(componentKey, key -> Multiset.create());
+      for (Object line : (JSONArray) component.getValue()) {
         issues.add(new IssueKey(componentKey, ruleKey, (Integer) line));
+      }
+    }
+  }
+
+  private static void loadSarif(JSONObject json, Map<String, Multiset<IssueKey>> result) {
+    for (Object runValue : (JSONArray) json.get("runs")) {
+      JSONObject run = (JSONObject) runValue;
+      for (Object resultValue : (JSONArray) run.get("results")) {
+        JSONObject issue = (JSONObject) resultValue;
+        String ruleKey = (String) issue.get("ruleId");
+        for (Object locationValue : (JSONArray) issue.get("locations")) {
+          JSONObject physical = (JSONObject) ((JSONObject) locationValue).get("physicalLocation");
+          String componentKey = (String) ((JSONObject) physical.get("artifactLocation")).get("uri");
+          JSONObject region = (JSONObject) physical.get("region");
+          Integer line = region == null ? null : (Integer) region.get("startLine");
+          result.computeIfAbsent(componentKey, key -> Multiset.create())
+            .add(new IssueKey(componentKey, ruleKey, line));
+        }
       }
     }
   }
@@ -88,31 +107,31 @@ class Dump {
     }
 
     issues.sort(new IssueKeyComparator());
-
     PrintStream out = null;
     String prevRuleKey = null;
-    String prevComponentKey = null;
     for (IssueKey issueKey : issues) {
       if (!issueKey.ruleKey.equals(prevRuleKey)) {
         if (out != null) {
           endRule(out);
         }
         try {
-          out = new PrintStream(Files.newOutputStream(dir.toPath().resolve(ruleKeyToFileName(issueKey.ruleKey))), /* autoFlush: */ true, StandardCharsets.UTF_8.name());
+          out = new PrintStream(Files.newOutputStream(dir.toPath().resolve(ruleKeyToFileName(issueKey.ruleKey))), true, StandardCharsets.UTF_8.name());
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
-        out.print("{");
-        startComponent(out, issueKey.componentKey);
-      } else if (!issueKey.componentKey.equals(prevComponentKey)) {
-        endComponent(out);
-        out.print(",");
-        startComponent(out, issueKey.componentKey);
+        out.print("{\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\",\"version\":\"2.1.0\",\"runs\":[{\"tool\":{\"driver\":{\"name\":\"LITS\"}},\"results\":[");
       } else {
         out.print(",");
       }
-      out.print("\n" + issueKey.line);
-      prevComponentKey = issueKey.componentKey;
+      out.print("{\"ruleId\":");
+      out.print(JSONValue.toJSONString(issueKey.ruleKey));
+      out.print(",\"message\":{\"text\":\"Issue\"},\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":");
+      out.print(JSONValue.toJSONString(issueKey.componentKey));
+      out.print("}");
+      if (issueKey.line != 0) {
+        out.print(",\"region\":{\"startLine\":" + issueKey.line + ",\"endLine\":" + issueKey.line + "}");
+      }
+      out.print("}}]}");
       prevRuleKey = issueKey.ruleKey;
     }
     if (out != null) {
@@ -128,17 +147,8 @@ class Dump {
     return fileName.replaceFirst("-", ":").substring(0, fileName.length() - EXT.length() - 1);
   }
 
-  private static void startComponent(PrintStream out, String componentKey) {
-    out.print("\n\"" + componentKey + "\": [");
-  }
-
-  private static void endComponent(PrintStream out) {
-    out.print("\n]");
-  }
-
   private static void endRule(PrintStream out) {
-    endComponent(out);
-    out.print("\n}\n");
+    out.print("]}]}\n");
     out.close();
   }
 

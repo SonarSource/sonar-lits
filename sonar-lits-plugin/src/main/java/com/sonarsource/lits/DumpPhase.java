@@ -24,6 +24,7 @@ import org.sonar.api.batch.fs.FileSystem;
 import org.sonar.api.batch.fs.InputComponent;
 import org.sonar.api.batch.fs.InputDir;
 import org.sonar.api.batch.fs.InputFile;
+import org.sonar.api.batch.fs.TextRange;
 import org.sonar.api.batch.rule.ActiveRule;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.batch.rule.Severity;
@@ -89,7 +90,8 @@ public class DumpPhase implements ProjectSensor {
           .on(resource)
           .message("Missing");
         if (issueKey.line != 0) {
-          location.at(((InputFile) resource).selectLine(issueKey.line));
+          TextRange textRange = ((InputFile) resource).selectLine(issueKey.line);
+          location.at(textRange);
         }
         newIssue
           .forRule(ruleKey)

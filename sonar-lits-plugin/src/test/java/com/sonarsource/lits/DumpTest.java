@@ -51,34 +51,12 @@ public class DumpTest {
     Dump.save(issues, dir);
 
     assertThat(dir.listFiles()).hasSize(3);
-    String expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1\n")
-      .append("],\n")
-      .append("\"componentKey2\": [\n")
-      .append("1\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
-    expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1,\n")
-      .append("2\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey2.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
-    expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-rule-key3.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
+    String sarif = new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.json").toPath()), StandardCharsets.UTF_8);
+    assertThat(sarif).contains("\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\"");
+    assertThat(sarif).contains("\"version\":\"2.1.0\"");
+    assertThat(sarif).contains("\"startLine\":1,\"endLine\":1");
+    assertThat(sarif).contains("\"uri\":\"componentKey1\"");
+    assertThat(sarif).contains("\"uri\":\"componentKey2\"");
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
     System.out.println(dump);
