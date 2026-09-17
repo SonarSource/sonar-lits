@@ -51,7 +51,7 @@ public class DumpTest {
     Dump.save(issues, dir);
 
     assertThat(dir.listFiles()).hasSize(3);
-    String sarif = new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.json").toPath()), StandardCharsets.UTF_8);
+    String sarif = new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.sarif").toPath()), StandardCharsets.UTF_8);
     assertThat(sarif).contains("\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\"");
     assertThat(sarif).contains("\"version\":\"2.1.0\"");
     assertThat(sarif).contains("\"startLine\":1,\"endLine\":1");

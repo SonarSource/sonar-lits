@@ -39,14 +39,15 @@ import java.util.stream.Stream;
 
 class Dump {
 
-  private static final String EXT = "json";
+  private static final String SARIF_EXT = "sarif";
+  private static final String LEGACY_EXT = "json";
 
   private Dump() {
   }
 
   static Map<String, Multiset<IssueKey>> load(File dir) {
     Map<String, Multiset<IssueKey>> result = new HashMap<>();
-    for (File file : listJsonFiles(dir.toPath())) {
+    for (File file : listDumpFiles(dir.toPath())) {
       load(file, result);
     }
     return result;
@@ -153,11 +154,12 @@ class Dump {
   }
 
   private static String ruleKeyToFileName(String ruleKey) {
-    return ruleKey.replace(':', '-') + "." + EXT;
+    return ruleKey.replace(':', '-') + "." + SARIF_EXT;
   }
 
   private static String ruleKeyFromFileName(String fileName) {
-    return fileName.replaceFirst("-", ":").substring(0, fileName.length() - EXT.length() - 1);
+    int extensionStart = fileName.lastIndexOf('.');
+    return fileName.substring(0, extensionStart).replaceFirst("-", ":");
   }
 
   private static void endRule(PrintStream out) {
@@ -165,12 +167,16 @@ class Dump {
     out.close();
   }
 
-  private static List<File> listJsonFiles(Path dir) {
+  private static boolean hasExtension(Path path, String extension) {
+    return path.getFileName().toString().endsWith("." + extension);
+  }
+
+  private static List<File> listDumpFiles(Path dir) {
     try (Stream<Path> paths = Files.list(dir)) {
       List<File> files = new ArrayList<>();
       paths
         .filter(Files::isRegularFile)
-        .filter(path -> path.getFileName().toString().endsWith("." + EXT))
+        .filter(path -> hasExtension(path, SARIF_EXT) || hasExtension(path, LEGACY_EXT))
         .forEach(path -> files.add(path.toFile()));
       return files;
     } catch (IOException e) {
