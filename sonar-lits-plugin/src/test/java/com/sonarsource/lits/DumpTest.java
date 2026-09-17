@@ -42,7 +42,7 @@ public class DumpTest {
   public void save_load() throws Exception {
     File dir = new File(temporaryFolder.newFolder(), "dump");
     List<IssueKey> issues = new ArrayList<>();
-    issues.add(new IssueKey("componentKey2", "repoKey:ruleKey1", 1));
+    issues.add(new IssueKey("componentKey2", "repoKey:ruleKey1", 1, "Found an error"));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey1", 1));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 2));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 1));
@@ -57,6 +57,7 @@ public class DumpTest {
     assertThat(sarif).contains("\"startLine\":1,\"endLine\":1");
     assertThat(sarif).contains("\"uri\":\"componentKey1\"");
     assertThat(sarif).contains("\"uri\":\"componentKey2\"");
+    assertThat(sarif).contains("\"text\":\"Found an error\"");
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
     System.out.println(dump);

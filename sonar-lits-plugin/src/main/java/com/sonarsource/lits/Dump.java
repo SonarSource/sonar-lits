@@ -87,13 +87,15 @@ class Dump {
       for (Object resultValue : (JSONArray) run.get("results")) {
         JSONObject issue = (JSONObject) resultValue;
         String ruleKey = (String) issue.get("ruleId");
+        JSONObject message = (JSONObject) issue.get("message");
+        String issueMessage = message == null ? null : (String) message.get("text");
         for (Object locationValue : (JSONArray) issue.get("locations")) {
           JSONObject physical = (JSONObject) ((JSONObject) locationValue).get("physicalLocation");
           String componentKey = (String) ((JSONObject) physical.get("artifactLocation")).get("uri");
           JSONObject region = (JSONObject) physical.get("region");
           Integer line = region == null ? null : (Integer) region.get("startLine");
           result.computeIfAbsent(componentKey, key -> Multiset.create())
-            .add(new IssueKey(componentKey, ruleKey, line));
+            .add(new IssueKey(componentKey, ruleKey, line, issueMessage));
         }
       }
     }
@@ -125,7 +127,9 @@ class Dump {
       }
       out.print("{\"ruleId\":");
       out.print(JSONValue.toJSONString(issueKey.ruleKey));
-      out.print(",\"message\":{\"text\":\"Issue\"},\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":");
+      out.print(",\"message\":{\"text\":");
+      out.print(JSONValue.toJSONString(issueKey.message == null ? "Issue" : issueKey.message));
+      out.print("},\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":");
       out.print(JSONValue.toJSONString(issueKey.componentKey));
       out.print("}");
       if (issueKey.line != 0) {
