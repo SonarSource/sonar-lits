@@ -20,8 +20,6 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
 
-import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -89,7 +87,9 @@ class Dump {
     JSONArray runs = (JSONArray) json.get("runs");
     if (runs != null) {
       for (Object runValue : runs) {
-        loadRun((JSONObject) runValue, fallbackRuleKey, result);
+        if (runValue instanceof JSONObject) {
+          loadRun((JSONObject) runValue, fallbackRuleKey, result);
+        }
       }
     }
   }
@@ -98,7 +98,9 @@ class Dump {
     JSONArray results = (JSONArray) run.get("results");
     if (results != null) {
       for (Object resultValue : results) {
-        loadResult((JSONObject) resultValue, fallbackRuleKey, result);
+        if (resultValue instanceof JSONObject) {
+          loadResult((JSONObject) resultValue, fallbackRuleKey, result);
+        }
       }
     }
   }
@@ -117,10 +119,7 @@ class Dump {
     }
   }
 
-  private static void loadLocation(@Nullable JSONObject location, String ruleKey, String issueMessage, Map<String, Multiset<IssueKey>> result) {
-    if (location == null) {
-      return;
-    }
+  private static void loadLocation(JSONObject location, String ruleKey, String issueMessage, Map<String, Multiset<IssueKey>> result) {
     JSONObject physical = (JSONObject) location.get("physicalLocation");
     if (physical == null) {
       return;
