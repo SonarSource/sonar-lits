@@ -66,7 +66,7 @@ class Dump {
 
     String ruleKey = ruleKeyFromFileName(file.getName());
     if (json.containsKey("version") && json.containsKey("runs")) {
-      loadSarif(json, result);
+      loadSarif(json, ruleKey, result);
     } else {
       loadLegacy(json, ruleKey, result);
     }
@@ -82,17 +82,33 @@ class Dump {
     }
   }
 
-  private static void loadSarif(JSONObject json, Map<String, Multiset<IssueKey>> result) {
-    for (Object runValue : (JSONArray) json.get("runs")) {
+  private static void loadSarif(JSONObject json, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
+    JSONArray runs = (JSONArray) json.get("runs");
+    if (runs == null) {
+      return;
+    }
+    for (Object runValue : runs) {
       JSONObject run = (JSONObject) runValue;
-      for (Object resultValue : (JSONArray) run.get("results")) {
+      JSONArray results = (JSONArray) run.get("results");
+      if (results == null) {
+        continue;
+      }
+      for (Object resultValue : results) {
         JSONObject issue = (JSONObject) resultValue;
-        String ruleKey = (String) issue.get("ruleId");
+        String ruleKey = issue.get("ruleId") == null ? fallbackRuleKey : (String) issue.get("ruleId");
+        JSONArray locations = (JSONArray) issue.get("locations");
+        if (locations == null) {
+          continue;
+        }
         JSONObject message = (JSONObject) issue.get("message");
         String issueMessage = message == null ? null : (String) message.get("text");
-        for (Object locationValue : (JSONArray) issue.get("locations")) {
+        for (Object locationValue : locations) {
           JSONObject physical = (JSONObject) ((JSONObject) locationValue).get("physicalLocation");
-          String componentKey = (String) ((JSONObject) physical.get("artifactLocation")).get("uri");
+          JSONObject artifact = physical == null ? null : (JSONObject) physical.get("artifactLocation");
+          String componentKey = artifact == null ? null : (String) artifact.get("uri");
+          if (componentKey == null) {
+            continue;
+          }
           JSONObject region = (JSONObject) physical.get("region");
           Integer line = region == null ? null : (Integer) region.get("startLine");
           result.computeIfAbsent(componentKey, key -> Multiset.create())
@@ -120,28 +136,24 @@ class Dump {
   }
 
   private static void saveRule(File dir, String ruleKey, List<IssueKey> issues) {
-    JSONObject report = new JSONObject();
-    report.put("$schema", "https://json.schemastore.org/sarif-2.1.0.json");
-    report.put("version", "2.1.0");
-
     JSONObject driver = new JSONObject();
     driver.put("name", "LITS");
     JSONObject tool = new JSONObject();
     tool.put("driver", driver);
-    JSONArray runs = new JSONArray();
-    JSONObject run = new JSONObject();
-    run.put("tool", tool);
-    JSONArray results = new JSONArray();
-    for (IssueKey issue : issues) {
-      results.add(issueJson(issue));
+    StringBuilder report = new StringBuilder();
+    report.append("{\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\",\"version\":\"2.1.0\",\"runs\":[{\"tool\":");
+    report.append(JSONValue.toJSONString(tool));
+    report.append(",\"results\":[\n");
+    for (int i = 0; i < issues.size(); i++) {
+      if (i > 0) {
+        report.append(",\n");
+      }
+      report.append(JSONValue.toJSONString(issueJson(issues.get(i))));
     }
-    run.put("results", results);
-    runs.add(run);
-    report.put("runs", runs);
+    report.append("\n]}]}\n");
 
     try {
-      Files.write(dir.toPath().resolve(ruleKeyToFileName(ruleKey)),
-        JSONValue.toJSONString(report).getBytes(StandardCharsets.UTF_8));
+      Files.write(dir.toPath().resolve(ruleKeyToFileName(ruleKey)), report.toString().getBytes(StandardCharsets.UTF_8));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -188,12 +200,15 @@ class Dump {
 
   private static List<File> listDumpFiles(Path dir) {
     try (Stream<Path> paths = Files.list(dir)) {
-      List<File> files = new ArrayList<>();
+      Map<String, File> filesByRule = new HashMap<>();
       paths
         .filter(Files::isRegularFile)
         .filter(path -> hasExtension(path, SARIF_EXT) || hasExtension(path, LEGACY_EXT))
-        .forEach(path -> files.add(path.toFile()));
-      return files;
+        .forEach(path -> filesByRule.merge(
+          ruleKeyFromFileName(path.getFileName().toString()),
+          path.toFile(),
+          (existing, candidate) -> hasExtension(candidate.toPath(), SARIF_EXT) ? candidate : existing));
+      return new ArrayList<>(filesByRule.values());
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -209,6 +224,9 @@ class Dump {
         c = left.componentKey.compareTo(right.componentKey);
         if (c == 0) {
           c = left.line - right.line;
+          if (c == 0) {
+            c = Comparator.nullsFirst(String::compareTo).compare(left.message, right.message);
+          }
         }
       }
       return c;

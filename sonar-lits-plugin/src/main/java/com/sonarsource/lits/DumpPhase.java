@@ -88,7 +88,7 @@ public class DumpPhase implements ProjectSensor {
         NewIssue newIssue = context.newIssue();
         NewIssueLocation location = newIssue.newLocation()
           .on(resource)
-          .message("Missing");
+          .message(issueKey.message == null ? "Missing" : "Missing: " + issueKey.message);
         if (issueKey.line != 0) {
           TextRange textRange = ((InputFile) resource).selectLine(issueKey.line);
           location.at(textRange);
