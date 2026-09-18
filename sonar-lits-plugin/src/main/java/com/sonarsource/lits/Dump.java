@@ -110,7 +110,9 @@ class Dump {
       JSONObject message = (JSONObject) issue.get("message");
       String issueMessage = message == null ? null : (String) message.get("text");
       for (Object locationValue : locations) {
-        loadLocation((JSONObject) locationValue, ruleKey, issueMessage, result);
+        if (locationValue instanceof JSONObject) {
+          loadLocation((JSONObject) locationValue, ruleKey, issueMessage, result);
+        }
       }
     }
   }
