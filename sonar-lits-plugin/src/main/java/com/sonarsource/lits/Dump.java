@@ -20,6 +20,8 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -113,16 +115,26 @@ class Dump {
     }
   }
 
-  private static void loadLocation(JSONObject location, String ruleKey, String issueMessage, Map<String, Multiset<IssueKey>> result) {
-    JSONObject physical = (JSONObject) location.get("physicalLocation");
-    JSONObject artifact = physical == null ? null : (JSONObject) physical.get("artifactLocation");
-    String componentKey = artifact == null ? null : (String) artifact.get("uri");
-    if (componentKey != null) {
-      JSONObject region = physical == null ? null : (JSONObject) physical.get("region");
-      Integer line = region == null ? null : (Integer) region.get("startLine");
-      result.computeIfAbsent(componentKey, key -> Multiset.create())
-        .add(new IssueKey(componentKey, ruleKey, line, issueMessage));
+  private static void loadLocation(@Nullable JSONObject location, String ruleKey, String issueMessage, Map<String, Multiset<IssueKey>> result) {
+    if (location == null) {
+      return;
     }
+    JSONObject physical = (JSONObject) location.get("physicalLocation");
+    if (physical == null) {
+      return;
+    }
+    JSONObject artifact = (JSONObject) physical.get("artifactLocation");
+    if (artifact == null) {
+      return;
+    }
+    String componentKey = (String) artifact.get("uri");
+    if (componentKey == null) {
+      return;
+    }
+    JSONObject region = (JSONObject) physical.get("region");
+    Integer line = region == null ? null : (Integer) region.get("startLine");
+    result.computeIfAbsent(componentKey, key -> Multiset.create())
+      .add(new IssueKey(componentKey, ruleKey, line, issueMessage));
   }
 
   static void save(List<IssueKey> issues, File dir) {
