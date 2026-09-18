@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 class Dump {
 
   private static final String SARIF_EXT = "sarif";
+  private static final String RULE_ID = "ruleId";
   private static final String LEGACY_EXT = "json";
 
   private Dump() {
@@ -84,37 +85,43 @@ class Dump {
 
   private static void loadSarif(JSONObject json, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
     JSONArray runs = (JSONArray) json.get("runs");
-    if (runs == null) {
-      return;
+    if (runs != null) {
+      for (Object runValue : runs) {
+        loadRun((JSONObject) runValue, fallbackRuleKey, result);
+      }
     }
-    for (Object runValue : runs) {
-      JSONObject run = (JSONObject) runValue;
-      JSONArray results = (JSONArray) run.get("results");
-      if (results == null) {
-        continue;
-      }
+  }
+
+  private static void loadRun(JSONObject run, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
+    JSONArray results = (JSONArray) run.get("results");
+    if (results != null) {
       for (Object resultValue : results) {
-        JSONObject issue = (JSONObject) resultValue;
-        String ruleKey = issue.get("ruleId") == null ? fallbackRuleKey : (String) issue.get("ruleId");
-        JSONArray locations = (JSONArray) issue.get("locations");
-        if (locations == null) {
-          continue;
-        }
-        JSONObject message = (JSONObject) issue.get("message");
-        String issueMessage = message == null ? null : (String) message.get("text");
-        for (Object locationValue : locations) {
-          JSONObject physical = (JSONObject) ((JSONObject) locationValue).get("physicalLocation");
-          JSONObject artifact = physical == null ? null : (JSONObject) physical.get("artifactLocation");
-          String componentKey = artifact == null ? null : (String) artifact.get("uri");
-          if (componentKey == null) {
-            continue;
-          }
-          JSONObject region = (JSONObject) physical.get("region");
-          Integer line = region == null ? null : (Integer) region.get("startLine");
-          result.computeIfAbsent(componentKey, key -> Multiset.create())
-            .add(new IssueKey(componentKey, ruleKey, line, issueMessage));
-        }
+        loadResult((JSONObject) resultValue, fallbackRuleKey, result);
       }
+    }
+  }
+
+  private static void loadResult(JSONObject issue, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
+    String ruleKey = issue.get(RULE_ID) == null ? fallbackRuleKey : (String) issue.get(RULE_ID);
+    JSONArray locations = (JSONArray) issue.get("locations");
+    if (locations != null) {
+      JSONObject message = (JSONObject) issue.get("message");
+      String issueMessage = message == null ? null : (String) message.get("text");
+      for (Object locationValue : locations) {
+        loadLocation((JSONObject) locationValue, ruleKey, issueMessage, result);
+      }
+    }
+  }
+
+  private static void loadLocation(JSONObject location, String ruleKey, String issueMessage, Map<String, Multiset<IssueKey>> result) {
+    JSONObject physical = (JSONObject) location.get("physicalLocation");
+    JSONObject artifact = physical == null ? null : (JSONObject) physical.get("artifactLocation");
+    String componentKey = artifact == null ? null : (String) artifact.get("uri");
+    if (componentKey != null) {
+      JSONObject region = physical == null ? null : (JSONObject) physical.get("region");
+      Integer line = region == null ? null : (Integer) region.get("startLine");
+      result.computeIfAbsent(componentKey, key -> Multiset.create())
+        .add(new IssueKey(componentKey, ruleKey, line, issueMessage));
     }
   }
 
@@ -161,7 +168,7 @@ class Dump {
 
   private static JSONObject issueJson(IssueKey issue) {
     JSONObject result = new JSONObject();
-    result.put("ruleId", issue.ruleKey);
+    result.put(RULE_ID, issue.ruleKey);
 
     JSONObject message = new JSONObject();
     message.put("text", issue.message == null ? "Issue" : issue.message);
