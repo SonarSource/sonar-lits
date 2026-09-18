@@ -26,6 +26,7 @@ class IssueKey implements Comparable<IssueKey> {
   final String componentKey;
   final String ruleKey;
   final int line;
+  @Nullable
   final String message;
 
   IssueKey(String componentKey, String ruleKey, @Nullable Integer line) {
