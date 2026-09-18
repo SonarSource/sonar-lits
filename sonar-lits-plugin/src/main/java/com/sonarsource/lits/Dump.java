@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -110,47 +110,67 @@ class Dump {
     }
 
     issues.sort(new IssueKeyComparator());
-    PrintStream out = null;
-    String prevRuleKey = null;
-    for (IssueKey issueKey : issues) {
-      if (!issueKey.ruleKey.equals(prevRuleKey)) {
-        if (out != null) {
-          endRule(out);
-        }
-        out = startRule(dir, issueKey.ruleKey);
-      } else {
-        out.print(",");
-      }
-      writeIssue(out, issueKey);
-      prevRuleKey = issueKey.ruleKey;
+    Map<String, List<IssueKey>> issuesByRule = new LinkedHashMap<>();
+    for (IssueKey issue : issues) {
+      issuesByRule.computeIfAbsent(issue.ruleKey, key -> new ArrayList<>()).add(issue);
     }
-    if (out != null) {
-      endRule(out);
+    for (Map.Entry<String, List<IssueKey>> entry : issuesByRule.entrySet()) {
+      saveRule(dir, entry.getKey(), entry.getValue());
     }
   }
 
-  private static PrintStream startRule(File dir, String ruleKey) {
+  private static void saveRule(File dir, String ruleKey, List<IssueKey> issues) {
+    JSONObject report = new JSONObject();
+    report.put("$schema", "https://json.schemastore.org/sarif-2.1.0.json");
+    report.put("version", "2.1.0");
+
+    JSONObject driver = new JSONObject();
+    driver.put("name", "LITS");
+    JSONObject tool = new JSONObject();
+    tool.put("driver", driver);
+    JSONArray runs = new JSONArray();
+    JSONObject run = new JSONObject();
+    run.put("tool", tool);
+    JSONArray results = new JSONArray();
+    for (IssueKey issue : issues) {
+      results.add(issueJson(issue));
+    }
+    run.put("results", results);
+    runs.add(run);
+    report.put("runs", runs);
+
     try {
-      PrintStream out = new PrintStream(Files.newOutputStream(dir.toPath().resolve(ruleKeyToFileName(ruleKey))), true, StandardCharsets.UTF_8.name());
-      out.print("{\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\",\"version\":\"2.1.0\",\"runs\":[{\"tool\":{\"driver\":{\"name\":\"LITS\"}},\"results\":[");
-      return out;
+      Files.write(dir.toPath().resolve(ruleKeyToFileName(ruleKey)),
+        JSONValue.toJSONString(report).getBytes(StandardCharsets.UTF_8));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
   }
 
-  private static void writeIssue(PrintStream out, IssueKey issueKey) {
-    out.print("{\"ruleId\":");
-    out.print(JSONValue.toJSONString(issueKey.ruleKey));
-    out.print(",\"message\":{\"text\":");
-    out.print(JSONValue.toJSONString(issueKey.message == null ? "Issue" : issueKey.message));
-    out.print("},\"locations\":[{\"physicalLocation\":{\"artifactLocation\":{\"uri\":");
-    out.print(JSONValue.toJSONString(issueKey.componentKey));
-    out.print("}");
-    if (issueKey.line != 0) {
-      out.print(",\"region\":{\"startLine\":" + issueKey.line + ",\"endLine\":" + issueKey.line + "}");
+  private static JSONObject issueJson(IssueKey issue) {
+    JSONObject result = new JSONObject();
+    result.put("ruleId", issue.ruleKey);
+
+    JSONObject message = new JSONObject();
+    message.put("text", issue.message == null ? "Issue" : issue.message);
+    result.put("message", message);
+
+    JSONObject artifactLocation = new JSONObject();
+    artifactLocation.put("uri", issue.componentKey);
+    JSONObject physicalLocation = new JSONObject();
+    physicalLocation.put("artifactLocation", artifactLocation);
+    if (issue.line != 0) {
+      JSONObject region = new JSONObject();
+      region.put("startLine", issue.line);
+      region.put("endLine", issue.line);
+      physicalLocation.put("region", region);
     }
-    out.print("}}]}");
+    JSONObject location = new JSONObject();
+    location.put("physicalLocation", physicalLocation);
+    JSONArray locations = new JSONArray();
+    locations.add(location);
+    result.put("locations", locations);
+    return result;
   }
 
   private static String ruleKeyToFileName(String ruleKey) {
@@ -160,11 +180,6 @@ class Dump {
   private static String ruleKeyFromFileName(String fileName) {
     int extensionStart = fileName.lastIndexOf('.');
     return fileName.substring(0, extensionStart).replaceFirst("-", ":");
-  }
-
-  private static void endRule(PrintStream out) {
-    out.print("]}]}\n");
-    out.close();
   }
 
   private static boolean hasExtension(Path path, String extension) {

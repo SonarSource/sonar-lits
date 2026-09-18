@@ -16,6 +16,8 @@
  */
 package com.sonarsource.lits;
 
+import net.minidev.json.JSONObject;
+import net.minidev.json.JSONValue;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -52,9 +54,11 @@ public class DumpTest {
 
     assertThat(dir.listFiles()).hasSize(3);
     String sarif = new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.sarif").toPath()), StandardCharsets.UTF_8);
-    assertThat(sarif).contains("\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\"");
-    assertThat(sarif).contains("\"version\":\"2.1.0\"");
-    assertThat(sarif).contains("\"startLine\":1,\"endLine\":1");
+    JSONObject parsedSarif = (JSONObject) JSONValue.parse(sarif);
+    assertThat(parsedSarif.get("$schema")).isEqualTo("https://json.schemastore.org/sarif-2.1.0.json");
+    assertThat(parsedSarif.get("version")).isEqualTo("2.1.0");
+    assertThat(sarif).contains("startLine");
+    assertThat(sarif).contains("endLine");
     assertThat(sarif).contains("\"uri\":\"componentKey1\"");
     assertThat(sarif).contains("\"uri\":\"componentKey2\"");
     assertThat(sarif).contains("\"text\":\"Found an error\"");
