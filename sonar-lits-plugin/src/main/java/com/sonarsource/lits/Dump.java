@@ -20,6 +20,8 @@ import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
 
+import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -119,7 +121,7 @@ class Dump {
     }
   }
 
-  private static void loadLocation(JSONObject location, String ruleKey, String issueMessage, Map<String, Multiset<IssueKey>> result) {
+  private static void loadLocation(JSONObject location, String ruleKey, @Nullable String issueMessage, Map<String, Multiset<IssueKey>> result) {
     JSONObject physical = (JSONObject) location.get("physicalLocation");
     if (physical == null) {
       return;
