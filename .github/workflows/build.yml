@@ -41,6 +41,7 @@ jobs:
       id-token: write
       contents: write
     strategy:
+      fail-fast: false
       matrix:
         sq_version: [LATEST_RELEASE, DEV]
     steps:
@@ -69,7 +70,7 @@ jobs:
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: failure()
         with:
-          name: Plugin QA Test Report
+          name: Plugin QA Test Report (${{ matrix.sq_version }})
           reporter: java-junit
           path: its/plugin/**/target/surefire-reports/TEST-*.xml
           list-suites: "failed"
