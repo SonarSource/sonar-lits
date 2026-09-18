@@ -16,6 +16,8 @@
  */
 package com.sonarsource.lits;
 
+import net.minidev.json.JSONObject;
+import net.minidev.json.JSONValue;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -42,7 +44,7 @@ public class DumpTest {
   public void save_load() throws Exception {
     File dir = new File(temporaryFolder.newFolder(), "dump");
     List<IssueKey> issues = new ArrayList<>();
-    issues.add(new IssueKey("componentKey2", "repoKey:ruleKey1", 1));
+    issues.add(new IssueKey("componentKey2", "repoKey:ruleKey1", 1, "Found an error"));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey1", 1));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 2));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 1));
@@ -51,34 +53,15 @@ public class DumpTest {
     Dump.save(issues, dir);
 
     assertThat(dir.listFiles()).hasSize(3);
-    String expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1\n")
-      .append("],\n")
-      .append("\"componentKey2\": [\n")
-      .append("1\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
-    expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1,\n")
-      .append("2\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey2.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
-    expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-rule-key3.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
+    String sarif = new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.sarif").toPath()), StandardCharsets.UTF_8);
+    JSONObject parsedSarif = (JSONObject) JSONValue.parse(sarif);
+    assertThat(parsedSarif.get("$schema")).isEqualTo("https://json.schemastore.org/sarif-2.1.0.json");
+    assertThat(parsedSarif.get("version")).isEqualTo("2.1.0");
+    assertThat(sarif).contains("startLine");
+    assertThat(sarif).contains("endLine");
+    assertThat(sarif).contains("\"uri\":\"componentKey1\"");
+    assertThat(sarif).contains("\"uri\":\"componentKey2\"");
+    assertThat(sarif).contains("\"text\":\"Found an error\"");
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
     System.out.println(dump);
