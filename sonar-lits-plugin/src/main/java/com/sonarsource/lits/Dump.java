@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 class Dump {
@@ -187,11 +188,7 @@ class Dump {
     tool.setDriver(driver);
     run.setTool(tool);
 
-    List<Result> results = new ArrayList<>();
-    for (IssueKey issue : issues) {
-      results.add(issueToResult(issue));
-    }
-    run.setResults(results);
+    run.setResults(issues.stream().map(Dump::issueToResult).collect(Collectors.toList()));
     sarif.setRuns(Collections.singletonList(run));
 
     try {

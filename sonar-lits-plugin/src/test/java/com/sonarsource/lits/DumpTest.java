@@ -74,7 +74,7 @@ public class DumpTest {
   }
 
   @Test
-  public void load_legacy_with_trailing_commas() throws Exception {
+  public void load_legacy_with_trailing_commas() {
     File file = new File("src/test/resources/squid-S00104.json");
     Map<String, Multiset<IssueKey>> result = new HashMap<>();
     Dump.load(file, result);
