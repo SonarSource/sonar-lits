@@ -16,34 +16,45 @@
  */
 package com.sonarsource.lits;
 
-import net.minidev.json.JSONArray;
-import net.minidev.json.JSONObject;
-import net.minidev.json.JSONValue;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.jcup.sarif_2_1_0.SarifSchema210ImportExportSupport;
+import de.jcup.sarif_2_1_0.model.ArtifactLocation;
+import de.jcup.sarif_2_1_0.model.Location;
+import de.jcup.sarif_2_1_0.model.Message;
+import de.jcup.sarif_2_1_0.model.PhysicalLocation;
+import de.jcup.sarif_2_1_0.model.Region;
+import de.jcup.sarif_2_1_0.model.Result;
+import de.jcup.sarif_2_1_0.model.Run;
+import de.jcup.sarif_2_1_0.model.SarifSchema210;
+import de.jcup.sarif_2_1_0.model.SarifSchema210.Version;
+import de.jcup.sarif_2_1_0.model.Tool;
+import de.jcup.sarif_2_1_0.model.ToolComponent;
 
 import javax.annotation.Nullable;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
 class Dump {
 
   private static final String SARIF_EXT = "sarif";
-  private static final String RULE_ID = "ruleId";
   private static final String LEGACY_EXT = "json";
+  private static final SarifSchema210ImportExportSupport IMPORT_EXPORT = new SarifSchema210ImportExportSupport();
 
   private Dump() {
   }
@@ -57,85 +68,88 @@ class Dump {
   }
 
   static void load(File file, Map<String, Multiset<IssueKey>> result) {
-    JSONObject json;
-    try (
-      FileInputStream fis = new FileInputStream(file);
-      InputStreamReader in = new InputStreamReader(fis, StandardCharsets.UTF_8)
-    ) {
-      json = (JSONObject) JSONValue.parse(in);
+    String ruleKey = ruleKeyFromFileName(file.getName());
+    if (hasExtension(file.toPath(), SARIF_EXT)) {
+      loadSarifFile(file, ruleKey, result);
+    } else {
+      loadLegacyFile(file, ruleKey, result);
+    }
+  }
+
+  private static void loadLegacyFile(File file, String ruleKey, Map<String, Multiset<IssueKey>> result) {
+    try {
+      ObjectMapper mapper = new ObjectMapper();
+      mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+      JsonNode root = mapper.readTree(file);
+      java.util.Iterator<Map.Entry<String, JsonNode>> fields = root.fields();
+      while (fields.hasNext()) {
+        Map.Entry<String, JsonNode> entry = fields.next();
+        String componentKey = entry.getKey();
+        Multiset<IssueKey> issues = result.computeIfAbsent(componentKey, key -> Multiset.create());
+        for (JsonNode line : entry.getValue()) {
+          issues.add(new IssueKey(componentKey, ruleKey, line.asInt()));
+        }
+      }
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
-
-    String ruleKey = ruleKeyFromFileName(file.getName());
-    if (json.containsKey("version") && json.containsKey("runs")) {
-      loadSarif(json, ruleKey, result);
-    } else {
-      loadLegacy(json, ruleKey, result);
-    }
   }
 
-  private static void loadLegacy(JSONObject json, String ruleKey, Map<String, Multiset<IssueKey>> result) {
-    for (Map.Entry<String, Object> component : json.entrySet()) {
-      String componentKey = component.getKey();
-      Multiset<IssueKey> issues = result.computeIfAbsent(componentKey, key -> Multiset.create());
-      for (Object line : (JSONArray) component.getValue()) {
-        issues.add(new IssueKey(componentKey, ruleKey, (Integer) line));
-      }
+  private static void loadSarifFile(File file, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
+    SarifSchema210 sarif;
+    try {
+      sarif = IMPORT_EXPORT.fromFile(file);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
     }
+    loadSarif(sarif, fallbackRuleKey, result);
   }
 
-  private static void loadSarif(JSONObject json, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
-    JSONArray runs = (JSONArray) json.get("runs");
+  private static void loadSarif(SarifSchema210 sarif, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
+    List<Run> runs = sarif.getRuns();
     if (runs != null) {
-      for (Object runValue : runs) {
-        if (runValue instanceof JSONObject) {
-          loadRun((JSONObject) runValue, fallbackRuleKey, result);
-        }
+      for (Run run : runs) {
+        loadRun(run, fallbackRuleKey, result);
       }
     }
   }
 
-  private static void loadRun(JSONObject run, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
-    JSONArray results = (JSONArray) run.get("results");
+  private static void loadRun(Run run, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
+    List<Result> results = run.getResults();
     if (results != null) {
-      for (Object resultValue : results) {
-        if (resultValue instanceof JSONObject) {
-          loadResult((JSONObject) resultValue, fallbackRuleKey, result);
-        }
+      for (Result sarifResult : results) {
+        loadResult(sarifResult, fallbackRuleKey, result);
       }
     }
   }
 
-  private static void loadResult(JSONObject issue, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
-    String ruleKey = issue.get(RULE_ID) == null ? fallbackRuleKey : (String) issue.get(RULE_ID);
-    JSONArray locations = (JSONArray) issue.get("locations");
+  private static void loadResult(Result sarifResult, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
+    String ruleKey = sarifResult.getRuleId() == null ? fallbackRuleKey : sarifResult.getRuleId();
+    List<Location> locations = sarifResult.getLocations();
     if (locations != null) {
-      JSONObject message = (JSONObject) issue.get("message");
-      String issueMessage = message == null ? null : (String) message.get("text");
-      for (Object locationValue : locations) {
-        if (locationValue instanceof JSONObject) {
-          loadLocation((JSONObject) locationValue, ruleKey, issueMessage, result);
-        }
+      Message message = sarifResult.getMessage();
+      String issueMessage = message == null ? null : message.getText();
+      for (Location location : locations) {
+        loadLocation(location, ruleKey, issueMessage, result);
       }
     }
   }
 
-  private static void loadLocation(JSONObject location, String ruleKey, @Nullable String issueMessage, Map<String, Multiset<IssueKey>> result) {
-    JSONObject physical = (JSONObject) location.get("physicalLocation");
+  private static void loadLocation(Location location, String ruleKey, @Nullable String issueMessage, Map<String, Multiset<IssueKey>> result) {
+    PhysicalLocation physical = location.getPhysicalLocation();
     if (physical == null) {
       return;
     }
-    JSONObject artifact = (JSONObject) physical.get("artifactLocation");
+    ArtifactLocation artifact = physical.getArtifactLocation();
     if (artifact == null) {
       return;
     }
-    String componentKey = (String) artifact.get("uri");
+    String componentKey = artifact.getUri();
     if (componentKey == null) {
       return;
     }
-    JSONObject region = (JSONObject) physical.get("region");
-    Integer line = region == null ? null : (Integer) region.get("startLine");
+    Region region = physical.getRegion();
+    Integer line = region == null ? null : region.getStartLine();
     result.computeIfAbsent(componentKey, key -> Multiset.create())
       .add(new IssueKey(componentKey, ruleKey, line, issueMessage));
   }
@@ -158,52 +172,52 @@ class Dump {
   }
 
   private static void saveRule(File dir, String ruleKey, List<IssueKey> issues) {
-    JSONObject driver = new JSONObject();
-    driver.put("name", "LITS");
-    JSONObject tool = new JSONObject();
-    tool.put("driver", driver);
-    StringBuilder report = new StringBuilder();
-    report.append("{\"$schema\":\"https://json.schemastore.org/sarif-2.1.0.json\",\"version\":\"2.1.0\",\"runs\":[{\"tool\":");
-    report.append(JSONValue.toJSONString(tool));
-    report.append(",\"results\":[\n");
-    for (int i = 0; i < issues.size(); i++) {
-      if (i > 0) {
-        report.append(",\n");
-      }
-      report.append(JSONValue.toJSONString(issueJson(issues.get(i))));
+    SarifSchema210 sarif = new SarifSchema210();
+    sarif.set$schema(URI.create("https://json.schemastore.org/sarif-2.1.0.json"));
+    sarif.setVersion(Version._2_1_0);
+
+    Run run = new Run();
+    ToolComponent driver = new ToolComponent();
+    driver.setName("LITS");
+    Tool tool = new Tool();
+    tool.setDriver(driver);
+    run.setTool(tool);
+
+    List<Result> results = new ArrayList<>();
+    for (IssueKey issue : issues) {
+      results.add(issueToResult(issue));
     }
-    report.append("\n]}]}\n");
+    run.setResults(results);
+    sarif.setRuns(Collections.singletonList(run));
 
     try {
-      Files.write(dir.toPath().resolve(ruleKeyToFileName(ruleKey)), report.toString().getBytes(StandardCharsets.UTF_8));
+      IMPORT_EXPORT.toFile(sarif, dir.toPath().resolve(ruleKeyToFileName(ruleKey)));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
   }
 
-  private static JSONObject issueJson(IssueKey issue) {
-    JSONObject result = new JSONObject();
-    result.put(RULE_ID, issue.ruleKey);
+  private static Result issueToResult(IssueKey issue) {
+    Result result = new Result();
+    result.setRuleId(issue.ruleKey);
 
-    JSONObject message = new JSONObject();
-    message.put("text", issue.message == null ? "Issue" : issue.message);
-    result.put("message", message);
+    Message message = new Message();
+    message.setText(issue.message == null ? "Issue" : issue.message);
+    result.setMessage(message);
 
-    JSONObject artifactLocation = new JSONObject();
-    artifactLocation.put("uri", issue.componentKey);
-    JSONObject physicalLocation = new JSONObject();
-    physicalLocation.put("artifactLocation", artifactLocation);
+    ArtifactLocation artifactLocation = new ArtifactLocation();
+    artifactLocation.setUri(issue.componentKey);
+    PhysicalLocation physicalLocation = new PhysicalLocation();
+    physicalLocation.setArtifactLocation(artifactLocation);
     if (issue.line != 0) {
-      JSONObject region = new JSONObject();
-      region.put("startLine", issue.line);
-      region.put("endLine", issue.line);
-      physicalLocation.put("region", region);
+      Region region = new Region();
+      region.setStartLine(issue.line);
+      region.setEndLine(issue.line);
+      physicalLocation.setRegion(region);
     }
-    JSONObject location = new JSONObject();
-    location.put("physicalLocation", physicalLocation);
-    JSONArray locations = new JSONArray();
-    locations.add(location);
-    result.put("locations", locations);
+    Location location = new Location();
+    location.setPhysicalLocation(physicalLocation);
+    result.setLocations(Collections.singletonList(location));
     return result;
   }
 

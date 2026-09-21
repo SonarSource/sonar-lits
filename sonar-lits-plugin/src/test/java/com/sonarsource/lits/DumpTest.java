@@ -16,8 +16,8 @@
  */
 package com.sonarsource.lits;
 
-import net.minidev.json.JSONObject;
-import net.minidev.json.JSONValue;
+import de.jcup.sarif_2_1_0.SarifSchema210ImportExportSupport;
+import de.jcup.sarif_2_1_0.model.SarifSchema210;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -53,15 +53,17 @@ public class DumpTest {
     Dump.save(issues, dir);
 
     assertThat(dir.listFiles()).hasSize(3);
-    String sarif = new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.sarif").toPath()), StandardCharsets.UTF_8);
-    JSONObject parsedSarif = (JSONObject) JSONValue.parse(sarif);
-    assertThat(parsedSarif.get("$schema")).isEqualTo("https://json.schemastore.org/sarif-2.1.0.json");
-    assertThat(parsedSarif.get("version")).isEqualTo("2.1.0");
+    File sarifFile = new File(dir, "repoKey-ruleKey1.sarif");
+    SarifSchema210ImportExportSupport importExport = new SarifSchema210ImportExportSupport();
+    SarifSchema210 parsedSarif = importExport.fromFile(sarifFile);
+    assertThat(parsedSarif.get$schema().toString()).isEqualTo("https://json.schemastore.org/sarif-2.1.0.json");
+    assertThat(parsedSarif.getVersion().value()).isEqualTo("2.1.0");
+    String sarif = new String(Files.readAllBytes(sarifFile.toPath()), StandardCharsets.UTF_8);
     assertThat(sarif).contains("startLine");
     assertThat(sarif).contains("endLine");
-    assertThat(sarif).contains("\"uri\":\"componentKey1\"");
-    assertThat(sarif).contains("\"uri\":\"componentKey2\"");
-    assertThat(sarif).contains("\"text\":\"Found an error\"");
+    assertThat(sarif).contains("componentKey1");
+    assertThat(sarif).contains("componentKey2");
+    assertThat(sarif).contains("Found an error");
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
     System.out.println(dump);

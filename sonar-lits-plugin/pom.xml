@@ -40,9 +40,14 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>net.minidev</groupId>
-      <artifactId>json-smart</artifactId>
-      <version>2.6.0</version>
+      <groupId>de.jcup.sarif.java</groupId>
+      <artifactId>sarif-2.1.0</artifactId>
+      <version>1.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.13.4.2</version>
     </dependency>
 
     <!-- unit tests -->
@@ -133,7 +138,7 @@
             <configuration>
               <rules>
                 <requireFilesSize>
-                  <maxsize>1000000</maxsize>
+                  <maxsize>3000000</maxsize>
                   <minsize>80000</minsize>
                   <files>
                     <file>${project.build.directory}/${project.build.finalName}.jar</file>
