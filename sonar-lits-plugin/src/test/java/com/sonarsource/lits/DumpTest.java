@@ -74,6 +74,15 @@ public class DumpTest {
   }
 
   @Test
+  public void load_legacy_with_trailing_commas() throws Exception {
+    File file = new File("src/test/resources/squid-S00104.json");
+    Map<String, Multiset<IssueKey>> result = new HashMap<>();
+    Dump.load(file, result);
+    assertThat(result.size()).isEqualTo(1);
+    assertThat(result.get("project:src/Example.java").size()).isEqualTo(2);
+  }
+
+  @Test
   public void unable_to_load() throws Exception {
     File dir = temporaryFolder.newFolder();
     HashMap<String, Multiset<IssueKey>> map = new HashMap<>();

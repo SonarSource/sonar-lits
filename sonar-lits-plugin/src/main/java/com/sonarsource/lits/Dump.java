@@ -16,9 +16,10 @@
  */
 package com.sonarsource.lits;
 
-import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.jcup.sarif_2_1_0.SarifSchema210ImportExportSupport;
 import de.jcup.sarif_2_1_0.model.ArtifactLocation;
 import de.jcup.sarif_2_1_0.model.Location;
@@ -78,8 +79,11 @@ class Dump {
 
   private static void loadLegacyFile(File file, String ruleKey, Map<String, Multiset<IssueKey>> result) {
     try {
-      ObjectMapper mapper = new ObjectMapper();
-      mapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+      ObjectMapper mapper = JsonMapper.builder()
+        .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+        .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
+        .enable(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES)
+        .build();
       JsonNode root = mapper.readTree(file);
       java.util.Iterator<Map.Entry<String, JsonNode>> fields = root.fields();
       while (fields.hasNext()) {
