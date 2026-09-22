@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -61,14 +62,10 @@ public class DumpTest {
     assertThat(parsedSarif.get$schema().get().toString()).isEqualTo("https://json.schemastore.org/sarif-2.1.0.json");
     assertThat(parsedSarif.getVersion().value()).isEqualTo("2.1.0");
     String sarif = new String(Files.readAllBytes(sarifFile.toPath()), StandardCharsets.UTF_8);
-    assertThat(sarif).contains("startLine");
-    assertThat(sarif).contains("endLine");
-    assertThat(sarif).contains("componentKey1");
-    assertThat(sarif).contains("componentKey2");
-    assertThat(sarif).contains("Found an error");
+    assertThat(sarif).doesNotContain(": null");
+    assertThat(sarif).isEqualTo(readResource("repoKey-ruleKey1-expected.sarif").trim());
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
-    System.out.println(dump);
 
     assertThat(dump.size()).isEqualTo(2);
     assertThat(dump.get("componentKey1").size()).isEqualTo(4);
@@ -99,6 +96,14 @@ public class DumpTest {
     List<IssueKey> list = Collections.emptyList();
     assertThrows(RuntimeException.class, () ->
       Dump.save(list, dir));
+  }
+
+  private static String readResource(String name) throws Exception {
+    try (InputStream is = DumpTest.class.getResourceAsStream("/" + name)) {
+      byte[] bytes = new byte[is.available()];
+      is.read(bytes);
+      return new String(bytes, StandardCharsets.UTF_8);
+    }
   }
 
   @Test

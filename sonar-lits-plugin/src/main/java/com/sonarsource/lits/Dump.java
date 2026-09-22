@@ -16,9 +16,12 @@
  */
 package com.sonarsource.lits;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.Annotated;
+import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.sonarsource.lits.sarif.ArtifactLocation;
@@ -57,7 +60,24 @@ class Dump {
 
   private static final String SARIF_EXT = "sarif";
   private static final String LEGACY_EXT = "json";
-  private static final ObjectMapper SARIF_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
+  private static final ObjectMapper SARIF_MAPPER = new ObjectMapper()
+    .registerModule(new Jdk8Module())
+    .setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
+      @Override
+      public JsonInclude.Value findPropertyInclusion(Annotated a) {
+        JsonInclude.Value v = super.findPropertyInclusion(a);
+        if (v.getValueInclusion() == JsonInclude.Include.NON_NULL) {
+          return v.withValueInclusion(JsonInclude.Include.NON_ABSENT);
+        }
+        return v;
+      }
+    });
+
+  private static final ObjectMapper LEGACY_MAPPER = JsonMapper.builder()
+    .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+    .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
+    .enable(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES)
+    .build();
 
   private Dump() {
   }
@@ -81,12 +101,7 @@ class Dump {
 
   private static void loadLegacyFile(File file, String ruleKey, Map<String, Multiset<IssueKey>> result) {
     try {
-      ObjectMapper mapper = JsonMapper.builder()
-        .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-        .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
-        .enable(JsonReadFeature.ALLOW_UNQUOTED_FIELD_NAMES)
-        .build();
-      JsonNode root = mapper.readTree(file);
+      JsonNode root = LEGACY_MAPPER.readTree(file);
       java.util.Iterator<Map.Entry<String, JsonNode>> fields = root.fields();
       while (fields.hasNext()) {
         Map.Entry<String, JsonNode> entry = fields.next();
@@ -128,14 +143,12 @@ class Dump {
 
   @Nullable
   private static IssueKey toIssueKey(Location location, String ruleKey, @Nullable String issueMessage) {
-    PhysicalLocation physical = location.getPhysicalLocation().orElse(null);
-    ArtifactLocation artifact = physical == null ? null : physical.getArtifactLocation().orElse(null);
-    String componentKey = artifact == null ? null : artifact.getUri().orElse(null);
-    if (componentKey == null) {
-      return null;
-    }
-    Region region = physical.getRegion().orElse(null);
-    return new IssueKey(componentKey, ruleKey, region == null ? null : region.getStartLine().orElse(null), issueMessage);
+    return location.getPhysicalLocation()
+      .flatMap(physical -> physical.getArtifactLocation()
+        .flatMap(ArtifactLocation::getUri)
+        .map(componentKey -> new IssueKey(componentKey, ruleKey,
+          physical.getRegion().flatMap(Region::getStartLine).orElse(null), issueMessage)))
+      .orElse(null);
   }
 
   private static <T> List<T> nullToEmpty(@Nullable List<T> list) {
@@ -177,8 +190,8 @@ class Dump {
   }
 
   private static Result issueToResult(IssueKey issue) {
-    ArtifactLocation artifactLocation = new ArtifactLocation().withUri(issue.componentKey);
-    PhysicalLocation physicalLocation = new PhysicalLocation().withArtifactLocation(artifactLocation);
+    PhysicalLocation physicalLocation = new PhysicalLocation()
+      .withArtifactLocation(new ArtifactLocation().withUri(issue.componentKey));
     if (issue.line != 0) {
       physicalLocation.withRegion(new Region().withStartLine(issue.line).withEndLine(issue.line));
     }
