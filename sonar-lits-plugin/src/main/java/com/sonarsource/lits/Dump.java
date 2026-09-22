@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -111,52 +112,34 @@ class Dump {
   }
 
   private static void loadSarif(SarifSchema210 sarif, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
-    List<Run> runs = sarif.getRuns();
-    if (runs != null) {
-      for (Run run : runs) {
-        loadRun(run, fallbackRuleKey, result);
-      }
-    }
+    nullToEmpty(sarif.getRuns()).stream()
+      .flatMap(run -> nullToEmpty(run.getResults()).stream())
+      .flatMap(sarifResult -> toIssueKeys(sarifResult, fallbackRuleKey))
+      .forEach(issueKey -> result.computeIfAbsent(issueKey.componentKey, key -> Multiset.create()).add(issueKey));
   }
 
-  private static void loadRun(Run run, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
-    List<Result> results = run.getResults();
-    if (results != null) {
-      for (Result sarifResult : results) {
-        loadResult(sarifResult, fallbackRuleKey, result);
-      }
-    }
-  }
-
-  private static void loadResult(Result sarifResult, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
+  private static Stream<IssueKey> toIssueKeys(Result sarifResult, String fallbackRuleKey) {
     String ruleKey = sarifResult.getRuleId() == null ? fallbackRuleKey : sarifResult.getRuleId();
-    List<Location> locations = sarifResult.getLocations();
-    if (locations != null) {
-      Message message = sarifResult.getMessage();
-      String issueMessage = message == null ? null : message.getText();
-      for (Location location : locations) {
-        loadLocation(location, ruleKey, issueMessage, result);
-      }
-    }
+    String issueMessage = sarifResult.getMessage() == null ? null : sarifResult.getMessage().getText();
+    return nullToEmpty(sarifResult.getLocations()).stream()
+      .map(location -> toIssueKey(location, ruleKey, issueMessage))
+      .filter(Objects::nonNull);
   }
 
-  private static void loadLocation(Location location, String ruleKey, @Nullable String issueMessage, Map<String, Multiset<IssueKey>> result) {
+  @Nullable
+  private static IssueKey toIssueKey(Location location, String ruleKey, @Nullable String issueMessage) {
     PhysicalLocation physical = location.getPhysicalLocation();
-    if (physical == null) {
-      return;
-    }
-    ArtifactLocation artifact = physical.getArtifactLocation();
-    if (artifact == null) {
-      return;
-    }
-    String componentKey = artifact.getUri();
+    ArtifactLocation artifact = physical == null ? null : physical.getArtifactLocation();
+    String componentKey = artifact == null ? null : artifact.getUri();
     if (componentKey == null) {
-      return;
+      return null;
     }
     Region region = physical.getRegion();
-    Integer line = region == null ? null : region.getStartLine();
-    result.computeIfAbsent(componentKey, key -> Multiset.create())
-      .add(new IssueKey(componentKey, ruleKey, line, issueMessage));
+    return new IssueKey(componentKey, ruleKey, region == null ? null : region.getStartLine(), issueMessage);
+  }
+
+  private static <T> List<T> nullToEmpty(@Nullable List<T> list) {
+    return list == null ? Collections.emptyList() : list;
   }
 
   static void save(List<IssueKey> issues, File dir) {
@@ -192,6 +175,8 @@ class Dump {
     sarif.setRuns(Collections.singletonList(run));
 
     try {
+      // Pretty-printed output is deliberate: SARIF results carry ruleId, message, and nested locations,
+      // so pretty-printing gives more precise git diffs on single-field edits than one-line-per-result.
       IMPORT_EXPORT.toFile(sarif, dir.toPath().resolve(ruleKeyToFileName(ruleKey)));
     } catch (IOException e) {
       throw new UncheckedIOException(e);
