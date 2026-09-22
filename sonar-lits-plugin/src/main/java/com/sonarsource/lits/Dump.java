@@ -19,19 +19,19 @@ package com.sonarsource.lits;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import de.jcup.sarif_2_1_0.SarifSchema210ImportExportSupport;
-import de.jcup.sarif_2_1_0.model.ArtifactLocation;
-import de.jcup.sarif_2_1_0.model.Location;
-import de.jcup.sarif_2_1_0.model.Message;
-import de.jcup.sarif_2_1_0.model.PhysicalLocation;
-import de.jcup.sarif_2_1_0.model.Region;
-import de.jcup.sarif_2_1_0.model.Result;
-import de.jcup.sarif_2_1_0.model.Run;
-import de.jcup.sarif_2_1_0.model.SarifSchema210;
-import de.jcup.sarif_2_1_0.model.SarifSchema210.Version;
-import de.jcup.sarif_2_1_0.model.Tool;
-import de.jcup.sarif_2_1_0.model.ToolComponent;
+import com.sonarsource.lits.sarif.ArtifactLocation;
+import com.sonarsource.lits.sarif.Location;
+import com.sonarsource.lits.sarif.Message;
+import com.sonarsource.lits.sarif.PhysicalLocation;
+import com.sonarsource.lits.sarif.Region;
+import com.sonarsource.lits.sarif.Result;
+import com.sonarsource.lits.sarif.Run;
+import com.sonarsource.lits.sarif.SarifSchema210;
+import com.sonarsource.lits.sarif.SarifSchema210.Version;
+import com.sonarsource.lits.sarif.Tool;
+import com.sonarsource.lits.sarif.ToolComponent;
 
 import javax.annotation.Nullable;
 
@@ -57,7 +57,7 @@ class Dump {
 
   private static final String SARIF_EXT = "sarif";
   private static final String LEGACY_EXT = "json";
-  private static final SarifSchema210ImportExportSupport IMPORT_EXPORT = new SarifSchema210ImportExportSupport();
+  private static final ObjectMapper SARIF_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
 
   private Dump() {
   }
@@ -104,7 +104,7 @@ class Dump {
   private static void loadSarifFile(File file, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
     SarifSchema210 sarif;
     try {
-      sarif = IMPORT_EXPORT.fromFile(file);
+      sarif = SARIF_MAPPER.readValue(file, SarifSchema210.class);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -113,29 +113,29 @@ class Dump {
 
   private static void loadSarif(SarifSchema210 sarif, String fallbackRuleKey, Map<String, Multiset<IssueKey>> result) {
     nullToEmpty(sarif.getRuns()).stream()
-      .flatMap(run -> nullToEmpty(run.getResults()).stream())
+      .flatMap(run -> run.getResults().orElse(Collections.emptyList()).stream())
       .flatMap(sarifResult -> toIssueKeys(sarifResult, fallbackRuleKey))
       .forEach(issueKey -> result.computeIfAbsent(issueKey.componentKey, key -> Multiset.create()).add(issueKey));
   }
 
   private static Stream<IssueKey> toIssueKeys(Result sarifResult, String fallbackRuleKey) {
-    String ruleKey = sarifResult.getRuleId() == null ? fallbackRuleKey : sarifResult.getRuleId();
-    String issueMessage = sarifResult.getMessage() == null ? null : sarifResult.getMessage().getText();
-    return nullToEmpty(sarifResult.getLocations()).stream()
+    String ruleKey = sarifResult.getRuleId().orElse(fallbackRuleKey);
+    String issueMessage = sarifResult.getMessage() == null ? null : sarifResult.getMessage().getText().orElse(null);
+    return sarifResult.getLocations().orElse(Collections.emptyList()).stream()
       .map(location -> toIssueKey(location, ruleKey, issueMessage))
       .filter(Objects::nonNull);
   }
 
   @Nullable
   private static IssueKey toIssueKey(Location location, String ruleKey, @Nullable String issueMessage) {
-    PhysicalLocation physical = location.getPhysicalLocation();
-    ArtifactLocation artifact = physical == null ? null : physical.getArtifactLocation();
-    String componentKey = artifact == null ? null : artifact.getUri();
+    PhysicalLocation physical = location.getPhysicalLocation().orElse(null);
+    ArtifactLocation artifact = physical == null ? null : physical.getArtifactLocation().orElse(null);
+    String componentKey = artifact == null ? null : artifact.getUri().orElse(null);
     if (componentKey == null) {
       return null;
     }
-    Region region = physical.getRegion();
-    return new IssueKey(componentKey, ruleKey, region == null ? null : region.getStartLine(), issueMessage);
+    Region region = physical.getRegion().orElse(null);
+    return new IssueKey(componentKey, ruleKey, region == null ? null : region.getStartLine().orElse(null), issueMessage);
   }
 
   private static <T> List<T> nullToEmpty(@Nullable List<T> list) {
@@ -160,51 +160,32 @@ class Dump {
   }
 
   private static void saveRule(File dir, String ruleKey, List<IssueKey> issues) {
-    SarifSchema210 sarif = new SarifSchema210();
-    sarif.set$schema(URI.create("https://json.schemastore.org/sarif-2.1.0.json"));
-    sarif.setVersion(Version._2_1_0);
-
-    Run run = new Run();
-    ToolComponent driver = new ToolComponent();
-    driver.setName("LITS");
-    Tool tool = new Tool();
-    tool.setDriver(driver);
-    run.setTool(tool);
-
-    run.setResults(issues.stream().map(Dump::issueToResult).collect(Collectors.toList()));
-    sarif.setRuns(Collections.singletonList(run));
+    SarifSchema210 sarif = new SarifSchema210()
+      .with$schema(URI.create("https://json.schemastore.org/sarif-2.1.0.json"))
+      .withVersion(Version._2_1_0)
+      .withRuns(Collections.singletonList(new Run()
+        .withTool(new Tool().withDriver(new ToolComponent().withName("LITS")))
+        .withResults(issues.stream().map(Dump::issueToResult).collect(Collectors.toList()))));
 
     try {
       // Pretty-printed output is deliberate: SARIF results carry ruleId, message, and nested locations,
       // so pretty-printing gives more precise git diffs on single-field edits than one-line-per-result.
-      IMPORT_EXPORT.toFile(sarif, dir.toPath().resolve(ruleKeyToFileName(ruleKey)));
+      SARIF_MAPPER.writerWithDefaultPrettyPrinter().writeValue(dir.toPath().resolve(ruleKeyToFileName(ruleKey)).toFile(), sarif);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
   }
 
   private static Result issueToResult(IssueKey issue) {
-    Result result = new Result();
-    result.setRuleId(issue.ruleKey);
-
-    Message message = new Message();
-    message.setText(issue.message == null ? "Issue" : issue.message);
-    result.setMessage(message);
-
-    ArtifactLocation artifactLocation = new ArtifactLocation();
-    artifactLocation.setUri(issue.componentKey);
-    PhysicalLocation physicalLocation = new PhysicalLocation();
-    physicalLocation.setArtifactLocation(artifactLocation);
+    ArtifactLocation artifactLocation = new ArtifactLocation().withUri(issue.componentKey);
+    PhysicalLocation physicalLocation = new PhysicalLocation().withArtifactLocation(artifactLocation);
     if (issue.line != 0) {
-      Region region = new Region();
-      region.setStartLine(issue.line);
-      region.setEndLine(issue.line);
-      physicalLocation.setRegion(region);
+      physicalLocation.withRegion(new Region().withStartLine(issue.line).withEndLine(issue.line));
     }
-    Location location = new Location();
-    location.setPhysicalLocation(physicalLocation);
-    result.setLocations(Collections.singletonList(location));
-    return result;
+    return new Result()
+      .withRuleId(issue.ruleKey)
+      .withMessage(new Message().withText(issue.message == null ? "Issue" : issue.message))
+      .withLocations(Collections.singletonList(new Location().withPhysicalLocation(physicalLocation)));
   }
 
   private static String ruleKeyToFileName(String ruleKey) {

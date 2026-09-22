@@ -40,9 +40,9 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>de.jcup.sarif.java</groupId>
-      <artifactId>sarif-2.1.0</artifactId>
-      <version>1.1.0</version>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jdk8</artifactId>
+      <version>2.22.2</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -98,6 +98,22 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.jsonschema2pojo</groupId>
+        <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+        <version>1.2.2</version>
+        <configuration>
+          <sourceDirectory>${project.basedir}/src/main/resources/sarif-schema/sarif-schema-2.1.0.json</sourceDirectory>
+          <targetPackage>com.sonarsource.lits.sarif</targetPackage>
+          <generateBuilders>true</generateBuilders>
+          <useOptionalForGetters>true</useOptionalForGetters>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>generate</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId>
         <artifactId>sonar-packaging-maven-plugin</artifactId>

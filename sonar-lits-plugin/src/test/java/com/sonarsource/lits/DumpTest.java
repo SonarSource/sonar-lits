@@ -16,8 +16,10 @@
  */
 package com.sonarsource.lits;
 
-import de.jcup.sarif_2_1_0.SarifSchema210ImportExportSupport;
-import de.jcup.sarif_2_1_0.model.SarifSchema210;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.sonarsource.lits.sarif.SarifSchema210;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -54,9 +56,9 @@ public class DumpTest {
 
     assertThat(dir.listFiles()).hasSize(3);
     File sarifFile = new File(dir, "repoKey-ruleKey1.sarif");
-    SarifSchema210ImportExportSupport importExport = new SarifSchema210ImportExportSupport();
-    SarifSchema210 parsedSarif = importExport.fromFile(sarifFile);
-    assertThat(parsedSarif.get$schema().toString()).isEqualTo("https://json.schemastore.org/sarif-2.1.0.json");
+    ObjectMapper importExport = new ObjectMapper().registerModule(new Jdk8Module());
+    SarifSchema210 parsedSarif = importExport.readValue(sarifFile, SarifSchema210.class);
+    assertThat(parsedSarif.get$schema().get().toString()).isEqualTo("https://json.schemastore.org/sarif-2.1.0.json");
     assertThat(parsedSarif.getVersion().value()).isEqualTo("2.1.0");
     String sarif = new String(Files.readAllBytes(sarifFile.toPath()), StandardCharsets.UTF_8);
     assertThat(sarif).contains("startLine");
