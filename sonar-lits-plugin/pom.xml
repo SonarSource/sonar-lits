@@ -107,6 +107,7 @@
           <targetPackage>com.sonarsource.lits.sarif</targetPackage>
           <generateBuilders>true</generateBuilders>
           <useOptionalForGetters>true</useOptionalForGetters>
+          <inclusionLevel>NON_ABSENT</inclusionLevel>
         </configuration>
         <executions>
           <execution>

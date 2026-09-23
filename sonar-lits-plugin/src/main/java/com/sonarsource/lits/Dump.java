@@ -16,12 +16,9 @@
  */
 package com.sonarsource.lits;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.introspect.Annotated;
-import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.sonarsource.lits.sarif.ArtifactLocation;
@@ -61,17 +58,7 @@ class Dump {
   private static final String SARIF_EXT = "sarif";
   private static final String LEGACY_EXT = "json";
   private static final ObjectMapper SARIF_MAPPER = new ObjectMapper()
-    .registerModule(new Jdk8Module())
-    .setAnnotationIntrospector(new JacksonAnnotationIntrospector() {
-      @Override
-      public JsonInclude.Value findPropertyInclusion(Annotated a) {
-        JsonInclude.Value v = super.findPropertyInclusion(a);
-        if (v.getValueInclusion() == JsonInclude.Include.NON_NULL) {
-          return v.withValueInclusion(JsonInclude.Include.NON_ABSENT);
-        }
-        return v;
-      }
-    });
+    .registerModule(new Jdk8Module());
 
   private static final ObjectMapper LEGACY_MAPPER = JsonMapper.builder()
     .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
@@ -211,7 +198,9 @@ class Dump {
   }
 
   private static boolean hasExtension(Path path, String extension) {
-    return path.getFileName().toString().endsWith("." + extension);
+    String name = path.getFileName().toString();
+    String suffix = "." + extension;
+    return name.regionMatches(true, name.length() - suffix.length(), suffix, 0, suffix.length());
   }
 
   private static List<File> listDumpFiles(Path dir) {
