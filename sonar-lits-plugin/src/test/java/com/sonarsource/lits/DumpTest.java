@@ -16,11 +16,16 @@
  */
 package com.sonarsource.lits;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.sonarsource.lits.sarif.SarifSchema210;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -42,7 +47,7 @@ public class DumpTest {
   public void save_load() throws Exception {
     File dir = new File(temporaryFolder.newFolder(), "dump");
     List<IssueKey> issues = new ArrayList<>();
-    issues.add(new IssueKey("componentKey2", "repoKey:ruleKey1", 1));
+    issues.add(new IssueKey("componentKey2", "repoKey:ruleKey1", 1, "Found an error"));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey1", 1));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 2));
     issues.add(new IssueKey("componentKey1", "repoKey:ruleKey2", 1));
@@ -51,41 +56,29 @@ public class DumpTest {
     Dump.save(issues, dir);
 
     assertThat(dir.listFiles()).hasSize(3);
-    String expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1\n")
-      .append("],\n")
-      .append("\"componentKey2\": [\n")
-      .append("1\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey1.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
-    expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1,\n")
-      .append("2\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-ruleKey2.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
-    expected = new StringBuilder()
-      .append("{\n")
-      .append("\"componentKey1\": [\n")
-      .append("1\n")
-      .append("]\n")
-      .append("}\n")
-      .toString();
-    assertThat(new String(Files.readAllBytes(new File(dir, "repoKey-rule-key3.json").toPath()), StandardCharsets.UTF_8)).isEqualTo(expected);
+    File sarifFile = new File(dir, "repoKey-ruleKey1.sarif");
+    ObjectMapper importExport = new ObjectMapper().registerModule(new Jdk8Module());
+    SarifSchema210 parsedSarif = importExport.readValue(sarifFile, SarifSchema210.class);
+    assertThat(parsedSarif.get$schema().get().toString()).isEqualTo("https://json.schemastore.org/sarif-2.1.0.json");
+    assertThat(parsedSarif.getVersion().value()).isEqualTo("2.1.0");
+    String sarif = new String(Files.readAllBytes(sarifFile.toPath()), StandardCharsets.UTF_8);
+    assertThat(sarif).doesNotContain(": null");
+    assertThat(sarif).isEqualTo(readResource("repoKey-ruleKey1-expected.sarif").trim());
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
-    System.out.println(dump);
 
     assertThat(dump.size()).isEqualTo(2);
     assertThat(dump.get("componentKey1").size()).isEqualTo(4);
     assertThat(dump.get("componentKey2").size()).isEqualTo(1);
+  }
+
+  @Test
+  public void load_legacy_with_trailing_commas() {
+    File file = new File("src/test/resources/squid-S00104.json");
+    Map<String, Multiset<IssueKey>> result = new HashMap<>();
+    Dump.load(file, result);
+    assertThat(result.size()).isEqualTo(1);
+    assertThat(result.get("project:src/Example.java").size()).isEqualTo(2);
   }
 
   @Test
@@ -103,6 +96,14 @@ public class DumpTest {
     List<IssueKey> list = Collections.emptyList();
     assertThrows(RuntimeException.class, () ->
       Dump.save(list, dir));
+  }
+
+  private static String readResource(String name) throws Exception {
+    try (InputStream is = DumpTest.class.getResourceAsStream("/" + name)) {
+      byte[] bytes = new byte[is.available()];
+      is.read(bytes);
+      return new String(bytes, StandardCharsets.UTF_8);
+    }
   }
 
   @Test

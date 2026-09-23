@@ -34,9 +34,14 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>net.minidev</groupId>
-      <artifactId>json-smart</artifactId>
-      <version>2.6.0</version>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jdk8</artifactId>
+      <version>2.22.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.22.2</version>
     </dependency>
 
     <!-- unit tests -->
@@ -81,6 +86,23 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.jsonschema2pojo</groupId>
+        <artifactId>jsonschema2pojo-maven-plugin</artifactId>
+        <version>1.2.2</version>
+        <configuration>
+          <sourceDirectory>${project.basedir}/src/main/resources/sarif-schema/sarif-schema-2.1.0.json</sourceDirectory>
+          <targetPackage>com.sonarsource.lits.sarif</targetPackage>
+          <generateBuilders>true</generateBuilders>
+          <useOptionalForGetters>true</useOptionalForGetters>
+          <inclusionLevel>NON_ABSENT</inclusionLevel>
+        </configuration>
+        <executions>
+          <execution>
+            <goals><goal>generate</goal></goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.sonarsource.sonar-packaging-maven-plugin</groupId>
         <artifactId>sonar-packaging-maven-plugin</artifactId>
         <configuration>
@@ -120,7 +142,7 @@
             <configuration>
               <rules>
                 <requireFilesSize>
-                  <maxsize>1000000</maxsize>
+                  <maxsize>3000000</maxsize>
                   <minsize>80000</minsize>
                   <files>
                     <file>${project.build.directory}/${project.build.finalName}.jar</file>
