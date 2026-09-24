@@ -18,6 +18,9 @@ package com.sonarsource.lits;
 
 final class CoverageProbe {
 
+  private CoverageProbe() {
+  }
+
   static int select(boolean covered) {
     if (covered) {
       return 1;
