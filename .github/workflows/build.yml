@@ -58,6 +58,10 @@ jobs:
         with:
           secrets: |
             development/github/token/licenses-ro token | GITHUB_TOKEN;
+      - name: Wait for Artifactory token federation
+        uses: SonarSource/sonarsource-infra-artifactory/.github/actions/wait-for-artifactory-token-federation@979fc5f122d4f67f0d7e0ea880e0f1c3b8019941
+        with:
+          probe-path: "api/search/versions?g=com.sonarsource.sonarqube&a=sonarqube-enterprise-lw&remote=1&repos=sonarsource-releases&v=*"
       - name: Run Plugin QA Tests
         working-directory: its/plugin
         env:
@@ -65,7 +69,7 @@ jobs:
           SONARSOURCE_REPOSITORY_URL: https://repox.jfrog.io/artifactory/sonarsource-qa
           SONARSOURCE_QA: true
         run: |
-          mvn test -DjavaVersion="LATEST_RELEASE" -Dsonar.runtimeVersion=${{ matrix.sq_version }} -Dmaven.test.redirectTestOutputToFile=false -B -e -V
+          mvn test -DjavaVersion="LATEST_RELEASE" -Dsonar.runtimeVersion=${{ matrix.sq_version }} -Dorchestrator.artifactory.url=https://repox-internal.dev.sonar.build/artifactory "-Dorchestrator.artifactory.accessToken=${ARTIFACTORY_ACCESS_TOKEN}" -Dmaven.test.redirectTestOutputToFile=false -B -e -V
       - name: Generate test report on failure
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: failure()
