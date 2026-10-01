@@ -91,7 +91,7 @@ public class DumpPhaseTest {
   @Test
   public void should_report_missing_issues() {
     Multiset<IssueKey> issues = Multiset.create();
-    issues.add(new IssueKey("", "squid:S00103", null));
+    issues.add(new IssueKey("", "squid:S00103", 1));
     issues.add(new IssueKey("", "squid:S00104", null));
     when(checker.getByComponentKey(anyString())).thenReturn(issues);
 
@@ -105,6 +105,7 @@ public class DumpPhaseTest {
     decorator.execute(sensorContext);
 
     assertThat(sensorContext.allIssues()).hasSize(1);
+    assertThat(sensorContext.allIssues().iterator().next().primaryLocation().textRange()).isNotNull();
   }
 
   @Test

@@ -26,11 +26,18 @@ class IssueKey implements Comparable<IssueKey> {
   final String componentKey;
   final String ruleKey;
   final int line;
+  @Nullable
+  final String message;
 
   IssueKey(String componentKey, String ruleKey, @Nullable Integer line) {
+    this(componentKey, ruleKey, line, null);
+  }
+
+  IssueKey(String componentKey, String ruleKey, @Nullable Integer line, @Nullable String message) {
     this.componentKey = componentKey;
     this.ruleKey = ruleKey;
     this.line = line != null ? line : 0;
+    this.message = message;
   }
 
   @Override

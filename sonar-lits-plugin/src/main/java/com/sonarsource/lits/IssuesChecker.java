@@ -111,7 +111,7 @@ public class IssuesChecker implements IssueFilter {
       return true;
     }
 
-    IssueKey issueKey = new IssueKey(issue.componentKey(), issue.ruleKey().toString(), issue.line());
+    IssueKey issueKey = new IssueKey(issue.componentKey(), issue.ruleKey().toString(), issue.line(), issue.message());
     dump.add(issueKey);
     Multiset<IssueKey> componentIssues = getByComponentKey(issueKey.componentKey);
     if (componentIssues.contains(issueKey)) {
