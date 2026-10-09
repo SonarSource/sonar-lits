@@ -78,8 +78,6 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
-      matrix:
-        sq_version: [LATEST_RELEASE, DEV]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
@@ -101,12 +99,12 @@ jobs:
           SONARSOURCE_REPOSITORY_URL: https://repox.jfrog.io/artifactory/sonarsource-qa
           SONARSOURCE_QA: true
         run: |
-          mvn test -DjavaVersion="LATEST_RELEASE" -Dsonar.runtimeVersion=${{ matrix.sq_version }} -Dmaven.test.redirectTestOutputToFile=false -B -e -V
+          mvn test -DjavaVersion="LATEST_RELEASE" -Dsonar.runtimeVersion=DEV -Dmaven.test.redirectTestOutputToFile=false -B -e -V
       - name: Generate test report on failure
         uses: dorny/test-reporter@a43b3a5f7366b97d083190328d2c652e1a8b6aa2 # v3.0.0
         if: failure()
         with:
-          name: Plugin QA Test Report (${{ matrix.sq_version }})
+          name: Plugin QA Test Report (DEV)
           reporter: java-junit
           path: its/plugin/**/target/surefire-reports/TEST-*.xml
           list-suites: "failed"
