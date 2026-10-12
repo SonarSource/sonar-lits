@@ -25,7 +25,7 @@
     <dependency>
       <groupId>org.sonarsource.sonarqube</groupId>
       <artifactId>sonar-ws</artifactId>
-      <version>26.10.0.132816</version>
+      <version>26.10.0.133078</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
