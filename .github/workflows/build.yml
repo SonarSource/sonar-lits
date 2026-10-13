@@ -125,7 +125,7 @@ jobs:
           promote-pull-request: true
 
   notify-build-failure:
-    needs: [ build, plugin_qa, promote ]
+    needs: [ build, plugin_qa, analysis, promote ]
     if: >-
       always()
       && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/branch-') || startsWith(github.ref, 'refs/heads/dogfood-'))
