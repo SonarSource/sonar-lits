@@ -40,9 +40,7 @@
           },
           "region" : {
             "startLine" : 1,
-            "endLine" : 1,
-            "charOffset" : -1,
-            "byteOffset" : -1
+            "endLine" : 1
           }
         },
         "logicalLocations" : [ ],
@@ -78,9 +76,7 @@
           },
           "region" : {
             "startLine" : 1,
-            "endLine" : 1,
-            "charOffset" : -1,
-            "byteOffset" : -1
+            "endLine" : 1
           }
         },
         "logicalLocations" : [ ],
@@ -102,6 +98,7 @@
     "runAggregates" : [ ],
     "redactionTokens" : [ ],
     "newlineSequences" : [ "\r\n", "\n" ],
+    "columnKind" : "utf16CodeUnits",
     "threadFlowLocations" : [ ],
     "taxonomies" : [ ],
     "addresses" : [ ],

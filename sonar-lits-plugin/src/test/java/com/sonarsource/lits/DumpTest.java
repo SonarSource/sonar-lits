@@ -19,6 +19,8 @@ package com.sonarsource.lits;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.sonarsource.lits.sarif.SarifSchema210;
+import com.sonarsource.lits.IssueKey.IssueLocation;
+import com.sonarsource.lits.sarif.Region;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -79,6 +81,49 @@ public class DumpTest {
     Dump.load(file, result);
     assertThat(result.size()).isEqualTo(1);
     assertThat(result.get("project:src/Example.java").size()).isEqualTo(2);
+  }
+
+  @Test
+  public void precise_ranges_round_trip_without_collapsing_same_line_issues() throws Exception {
+    File directory = temporaryFolder.newFolder();
+    IssueLocation first = new IssueLocation(new Region().withStartLine(2).withStartColumn(2).withEndLine(3).withEndColumn(4)
+      .withCharOffset(5).withCharLength(8).withByteOffset(7).withByteLength(11));
+    IssueLocation second = new IssueLocation(new Region().withStartLine(2).withStartColumn(5).withEndLine(2).withEndColumn(8)
+      .withCharOffset(8).withCharLength(3).withByteOffset(10).withByteLength(3));
+    List<IssueKey> issues = new ArrayList<>();
+    issues.add(new IssueKey("file", "repo:rule", 2, "first", first));
+    issues.add(new IssueKey("file", "repo:rule", 2, "second", second));
+    Dump.save(issues, directory);
+    Multiset<IssueKey> loaded = Dump.load(directory).get("file");
+    assertThat(loaded.size()).isEqualTo(2);
+    assertThat(loaded.contains(issues.get(0))).isTrue();
+    assertThat(loaded.contains(issues.get(1))).isTrue();
+    String sarif = new String(Files.readAllBytes(new File(directory, "repo-rule.sarif").toPath()), StandardCharsets.UTF_8);
+    assertThat(sarif).contains("\"columnKind\" : \"utf16CodeUnits\"");
+    assertThat(sarif).doesNotContain("\"charOffset\" : -1").doesNotContain("\"byteOffset\" : -1");
+  }
+
+  @Test
+  public void ranges_without_source_and_file_level_issues_do_not_invent_offsets() throws Exception {
+    File directory = temporaryFolder.newFolder();
+    List<IssueKey> issues = new ArrayList<>();
+    issues.add(new IssueKey("file", "repo:rule", 2, null, IssueLocation.fromRange(IssueKeyTest.range(2, 1, 3, 2))));
+    issues.add(new IssueKey("file", "repo:rule", null));
+    Dump.save(issues, directory);
+    Multiset<IssueKey> loaded = Dump.load(directory).get("file");
+    assertThat(loaded.contains(issues.get(0))).isTrue();
+    assertThat(loaded.contains(issues.get(1))).isTrue();
+    String sarif = new String(Files.readAllBytes(new File(directory, "repo-rule.sarif").toPath()), StandardCharsets.UTF_8);
+    assertThat(sarif).doesNotContain("charOffset").doesNotContain("byteOffset").doesNotContain("charLength").doesNotContain("byteLength");
+  }
+
+  @Test
+  public void old_sarif_default_offsets_do_not_make_line_only_expectations_precise() {
+    assertThat(IssueLocation.fromRegion(new Region().withStartLine(1).withEndLine(1))).isNull();
+    IssueLocation location = IssueLocation.fromRegion(new Region().withStartLine(1).withStartColumn(2).withEndColumn(4));
+    assertThat(location.charOffset).isNull();
+    assertThat(location.byteOffset).isNull();
+    assertThat(location.endLine).isEqualTo(1);
   }
 
   @Test
