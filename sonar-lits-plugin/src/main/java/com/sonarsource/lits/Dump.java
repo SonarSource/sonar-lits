@@ -18,6 +18,7 @@ package com.sonarsource.lits;
 
 import com.sonarsource.lits.IssueKey.IssueLocation;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,7 +61,8 @@ class Dump {
   private static final String SARIF_EXT = "sarif";
   private static final String LEGACY_EXT = "json";
   private static final ObjectMapper SARIF_MAPPER = new ObjectMapper()
-    .registerModule(new Jdk8Module());
+    .registerModule(new Jdk8Module())
+    .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
 
   private static final ObjectMapper LEGACY_MAPPER = JsonMapper.builder()
     .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)

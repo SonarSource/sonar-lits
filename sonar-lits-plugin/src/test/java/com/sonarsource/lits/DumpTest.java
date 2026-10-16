@@ -65,6 +65,7 @@ public class DumpTest {
     assertThat(parsedSarif.getVersion().value()).isEqualTo("2.1.0");
     String sarif = new String(Files.readAllBytes(sarifFile.toPath()), StandardCharsets.UTF_8);
     assertThat(sarif).doesNotContain(": null");
+    assertThat(sarif).doesNotContain(": [ ]").doesNotContain(": { }");
     assertThat(sarif).isEqualTo(readResource("repoKey-ruleKey1-expected.sarif").trim());
 
     Map<String, Multiset<IssueKey>> dump = Dump.load(dir);
@@ -101,6 +102,20 @@ public class DumpTest {
     String sarif = new String(Files.readAllBytes(new File(directory, "repo-rule.sarif").toPath()), StandardCharsets.UTF_8);
     assertThat(sarif).contains("\"columnKind\" : \"utf16CodeUnits\"");
     assertThat(sarif).doesNotContain("\"charOffset\" : -1").doesNotContain("\"byteOffset\" : -1");
+  }
+
+  @Test
+  public void empty_collections_are_omitted_without_losing_zero_offsets() throws Exception {
+    File directory = temporaryFolder.newFolder();
+    IssueLocation location = new IssueLocation(new Region().withStartLine(1).withStartColumn(1).withEndLine(1).withEndColumn(1)
+      .withCharOffset(0).withCharLength(0).withByteOffset(0).withByteLength(0));
+    IssueKey issue = new IssueKey("file", "repo:rule", 1, "Issue", location);
+    Dump.save(Collections.singletonList(issue), directory);
+    IssueKey loaded = Dump.load(directory).get("file").iterator().next();
+    assertThat(loaded.location.charOffset).isEqualTo(0);
+    assertThat(loaded.location.charLength).isEqualTo(0);
+    assertThat(loaded.location.byteOffset).isEqualTo(0);
+    assertThat(loaded.location.byteLength).isEqualTo(0);
   }
 
   @Test
