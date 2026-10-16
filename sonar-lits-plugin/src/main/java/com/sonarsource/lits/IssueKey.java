@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -192,6 +193,7 @@ class IssueKey implements Comparable<IssueKey> {
       private final byte[] bytes;
       private final Charset charset;
       private final String text;
+      private final boolean hasDecodingErrors;
       private final int bomBytes;
       private final int[] utf8Offsets;
       private final List<Integer> lineStarts = new ArrayList<>();
@@ -201,8 +203,17 @@ class IssueKey implements Comparable<IssueKey> {
         bytes = path != null && Files.isRegularFile(path) ? Files.readAllBytes(path) : readStream(file);
         charset = effectiveCharset(file.charset(), bytes);
         bomBytes = bomLength(charset, bytes);
-        text = charset.newDecoder().decode(ByteBuffer.wrap(bytes, bomBytes, bytes.length - bomBytes)).toString();
-        utf8Offsets = charset.name().equals("UTF-8") ? utf8Offsets(text, bomBytes) : new int[0];
+        String decodedText;
+        boolean decodingErrors = false;
+        try {
+          decodedText = charset.newDecoder().decode(ByteBuffer.wrap(bytes, bomBytes, bytes.length - bomBytes)).toString();
+        } catch (CharacterCodingException exception) {
+          decodedText = new String(bytes, bomBytes, bytes.length - bomBytes, charset);
+          decodingErrors = true;
+        }
+        text = decodedText;
+        hasDecodingErrors = decodingErrors;
+        utf8Offsets = !hasDecodingErrors && charset.name().equals("UTF-8") ? utf8Offsets(text, bomBytes) : new int[0];
         lineStarts.add(0);
         int index = 0;
         while (index < text.length()) {
@@ -234,6 +245,9 @@ class IssueKey implements Comparable<IssueKey> {
 
       @Nullable
       private Integer byteOffset(int offset) {
+        if (hasDecodingErrors) {
+          return null;
+        }
         if (utf8Offsets.length != 0) {
           return utf8Offsets[offset] < 0 ? null : utf8Offsets[offset];
         }

@@ -223,6 +223,28 @@ public class IssuesCheckerTest {
   }
 
   @Test
+  public void capture_and_save_tolerate_malformed_utf8_source_files() throws IOException {
+    byte[] bytes = {'a', (byte) 0xE9, '\r', '\n', 'b'};
+    File source = new File(temporaryFolder.getRoot(), "example.as");
+    Files.write(source.toPath(), bytes);
+    InputFile file = TestInputFileBuilder.create("project", "example.as")
+      .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents(new String(bytes, StandardCharsets.UTF_8))
+      .setCharset(StandardCharsets.UTF_8).build();
+    fileSystem.add(file);
+    FilterableIssue issue = preciseIssue(file.key(), file.newRange(2, 0, 2, 1));
+    assertThat(checker.accept(issue, chainReturnTrue)).isTrue();
+    checker.save();
+    IssueKey saved = Dump.load(output).get(file.key()).iterator().next();
+    assertThat(saved.location.startLine).isEqualTo(2);
+    assertThat(saved.location.startColumn).isEqualTo(1);
+    assertThat(saved.location.endColumn).isEqualTo(2);
+    assertThat(saved.location.charOffset).isEqualTo(4);
+    assertThat(saved.location.charLength).isEqualTo(1);
+    assertThat(saved.location.byteOffset).isNull();
+    assertThat(saved.location.byteLength).isNull();
+  }
+
+  @Test
   public void precise_offsets_are_checked_when_present_in_expectations() {
     TextRange range = IssueKeyTest.range(1, 2, 1, 4);
     Multiset<IssueKey> previous = expected("file", new IssueLocation(new Region().withStartLine(1).withStartColumn(3).withEndLine(1).withEndColumn(5)
