@@ -21,8 +21,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.CoderResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -190,18 +193,16 @@ class IssueKey implements Comparable<IssueKey> {
 
     static final class Source {
       private static final String UTF16 = "UTF-16";
-      private final byte[] bytes;
-      private final Charset charset;
-      private final String text;
       private final boolean hasDecodingErrors;
+      private final boolean utf16Encoding;
       private final int bomBytes;
-      private final int[] utf8Offsets;
+      private final int[] byteOffsets;
       private final List<Integer> lineStarts = new ArrayList<>();
 
       Source(InputFile file) throws IOException {
         Path path = file.path();
-        bytes = path != null && Files.isRegularFile(path) ? Files.readAllBytes(path) : readStream(file);
-        charset = effectiveCharset(file.charset(), bytes);
+        byte[] bytes = path != null && Files.isRegularFile(path) ? Files.readAllBytes(path) : readStream(file);
+        Charset charset = effectiveCharset(file.charset(), bytes);
         bomBytes = bomLength(charset, bytes);
         String decodedText;
         boolean decodingErrors = false;
@@ -211,16 +212,16 @@ class IssueKey implements Comparable<IssueKey> {
           decodedText = new String(bytes, bomBytes, bytes.length - bomBytes, charset);
           decodingErrors = true;
         }
-        text = decodedText;
         hasDecodingErrors = decodingErrors;
-        utf8Offsets = !hasDecodingErrors && charset.name().equals("UTF-8") ? utf8Offsets(text, bomBytes) : new int[0];
+        utf16Encoding = charset.name().startsWith(UTF16);
+        byteOffsets = !hasDecodingErrors && !utf16Encoding ? sourceOffsets(decodedText, charset, bytes, bomBytes) : new int[0];
         lineStarts.add(0);
         int index = 0;
-        while (index < text.length()) {
-          char character = text.charAt(index);
+        while (index < decodedText.length()) {
+          char character = decodedText.charAt(index);
           index++;
           if (character == '\r') {
-            if (index < text.length() && text.charAt(index) == '\n') {
+            if (index < decodedText.length() && decodedText.charAt(index) == '\n') {
               index++;
             }
             lineStarts.add(index);
@@ -248,15 +249,43 @@ class IssueKey implements Comparable<IssueKey> {
         if (hasDecodingErrors) {
           return null;
         }
-        if (utf8Offsets.length != 0) {
-          return utf8Offsets[offset] < 0 ? null : utf8Offsets[offset];
-        }
-        if (charset.name().startsWith(UTF16)) {
+        if (utf16Encoding) {
           return bomBytes + (offset * 2);
         }
-        byte[] prefix = text.substring(0, offset).getBytes(charset);
-        int end = bomBytes + prefix.length;
-        return end <= bytes.length && Arrays.equals(prefix, Arrays.copyOfRange(bytes, bomBytes, end)) ? end : null;
+        return byteOffsets[offset] < 0 ? null : byteOffsets[offset];
+      }
+
+      private static int[] sourceOffsets(String text, Charset charset, byte[] bytes, int bomBytes) {
+        if (charset.name().equals("UTF-8")) {
+          return utf8Offsets(text, bomBytes);
+        }
+        int[] offsets = new int[text.length() + 1];
+        Arrays.fill(offsets, -1);
+        offsets[0] = bomBytes;
+        CharsetEncoder encoder = charset.newEncoder();
+        CharBuffer input = CharBuffer.wrap(text);
+        ByteBuffer output = ByteBuffer.allocate((int) Math.ceil(encoder.maxBytesPerChar() * 2.0) + 16);
+        int position = bomBytes;
+        int index = 0;
+        while (index < text.length()) {
+          index += Character.charCount(text.codePointAt(index));
+          input.limit(index);
+          boolean last = index == text.length();
+          CoderResult result = encoder.encode(input, output, last);
+          if (!result.isUnderflow() || input.hasRemaining() || (last && !encoder.flush(output).isUnderflow())) {
+            return offsets;
+          }
+          output.flip();
+          while (output.hasRemaining()) {
+            if (position >= bytes.length || output.get() != bytes[position]) {
+              return offsets;
+            }
+            position++;
+          }
+          offsets[index] = position;
+          output.clear();
+        }
+        return offsets;
       }
 
       private static int[] utf8Offsets(String text, int bomBytes) {

@@ -33,6 +33,8 @@ import org.sonar.scanner.plugin.api.impl.fs.DefaultTextRange;
 
 import static org.fest.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class IssueKeyTest {
@@ -179,6 +181,46 @@ public class IssueKeyTest {
   public void byte_offsets_are_not_invented_inside_utf8_surrogate_pairs() throws Exception {
     IssueLocation location = locate("\uD83D\uDE00", StandardCharsets.UTF_8, range(1, 0, 1, 1));
     assertThat(location.charLength).isEqualTo(1);
+    assertThat(location.byteOffset).isNull();
+    assertThat(location.byteLength).isNull();
+  }
+
+  @Test
+  public void single_byte_offsets_are_precomputed_once() throws Exception {
+    Charset charset = spy(Charset.forName("windows-1252"));
+    byte[] bytes = "a\u20AC\r\nb".getBytes(Charset.forName("windows-1252"));
+    InputFile file = mock(InputFile.class);
+    when(file.charset()).thenReturn(charset);
+    when(file.inputStream()).thenReturn(new ByteArrayInputStream(bytes));
+    IssueLocation.Source source = new IssueLocation.Source(file);
+    for (int index = 0; index < 100; index++) {
+      IssueLocation location = source.locate(range(2, 0, 2, 1));
+      assertThat(location.byteOffset).isEqualTo(4);
+      assertThat(location.byteLength).isEqualTo(1);
+    }
+    verify(charset).newEncoder();
+  }
+
+  @Test
+  public void stateful_encodings_preserve_encoder_state_between_characters() throws Exception {
+    IssueLocation location = locate("a\u3042\u3044b", Charset.forName("ISO-2022-JP"), range(1, 2, 1, 3));
+    assertThat(location.byteOffset).isEqualTo(6);
+    assertThat(location.byteLength).isEqualTo(2);
+  }
+
+  @Test
+  public void noncanonical_encoding_does_not_invent_byte_offsets() throws Exception {
+    byte[] bytes = {'a', 0x1B, '(', 'B', 'b'};
+    IssueLocation location = locate(bytes, Charset.forName("ISO-2022-JP"), range(1, 1, 1, 2));
+    assertThat(location.charOffset).isEqualTo(1);
+    assertThat(location.charLength).isEqualTo(1);
+    assertThat(location.byteOffset).isNull();
+    assertThat(location.byteLength).isNull();
+  }
+
+  @Test
+  public void byte_offsets_are_not_invented_inside_utf32_surrogate_pairs() throws Exception {
+    IssueLocation location = locate("\uD83D\uDE00", Charset.forName("UTF-32LE"), range(1, 0, 1, 1));
     assertThat(location.byteOffset).isNull();
     assertThat(location.byteLength).isNull();
   }

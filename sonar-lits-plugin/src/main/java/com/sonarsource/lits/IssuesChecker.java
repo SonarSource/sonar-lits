@@ -58,7 +58,9 @@ public class IssuesChecker implements IssueFilter {
   private final File newDumpFile;
   private final File differencesFile;
   private final FileSystem fileSystem;
-  private final Map<String, IssueLocation.Source> sources = new HashMap<>();
+  private InputFile cachedFile;
+  private IssueLocation.Source cachedSource;
+  private final Map<String, Map<IssueKey, Multiset<IssueKey>>> preciseExpectations = new HashMap<>();
   private final Map<String, InputFile> inputFiles = new HashMap<>();
   private boolean indexedFiles;
 
@@ -156,32 +158,51 @@ public class IssuesChecker implements IssueFilter {
     if (file == null) {
       return IssueLocation.fromRange(range);
     }
-    IssueLocation.Source source = sources.computeIfAbsent(issue.componentKey(), key -> {
+    if (cachedSource == null || cachedFile != file) {
       try {
-        return new IssueLocation.Source(file);
+        cachedSource = new IssueLocation.Source(file);
+        cachedFile = file;
       } catch (IOException exception) {
         throw new UncheckedIOException(exception);
       }
-    });
-    return source.locate(range);
+    }
+    return cachedSource.locate(range);
   }
 
-  private static boolean removeExpected(Multiset<IssueKey> expectedIssues, IssueKey actual) {
+  private boolean removeExpected(Multiset<IssueKey> expectedIssues, IssueKey actual) {
+    IssueKey lineOnly = new IssueKey(actual.componentKey, actual.ruleKey, actual.line);
+    Map<IssueKey, Multiset<IssueKey>> byLine = preciseExpectations.get(actual.componentKey);
+    Multiset<IssueKey> candidates = byLine == null ? null : byLine.get(lineOnly);
     if (expectedIssues.remove(actual)) {
+      if (candidates != null) {
+        candidates.remove(actual);
+      }
       return true;
     }
-    IssueKey lineOnly = null;
-    for (IssueKey expected : expectedIssues) {
-      if (expected.line == actual.line && expected.ruleKey.equals(actual.ruleKey)) {
-        if (expected.location != null && expected.location.matches(actual.location)) {
+    if (byLine == null) {
+      byLine = preciseExpectations.computeIfAbsent(actual.componentKey, key -> indexPreciseExpectations(expectedIssues));
+    }
+    candidates = byLine.get(lineOnly);
+    if (candidates != null) {
+      for (IssueKey expected : candidates) {
+        if (expected.location.matches(actual.location)) {
+          candidates.remove(expected);
           return expectedIssues.remove(expected);
-        }
-        if (expected.location == null) {
-          lineOnly = expected;
         }
       }
     }
-    return lineOnly != null && expectedIssues.remove(lineOnly);
+    return expectedIssues.remove(lineOnly);
+  }
+
+  private static Map<IssueKey, Multiset<IssueKey>> indexPreciseExpectations(Multiset<IssueKey> expectedIssues) {
+    Map<IssueKey, Multiset<IssueKey>> byLine = new HashMap<>();
+    for (IssueKey expected : expectedIssues) {
+      if (expected.location != null) {
+        IssueKey lineOnly = new IssueKey(expected.componentKey, expected.ruleKey, expected.line);
+        byLine.computeIfAbsent(lineOnly, key -> Multiset.create()).add(expected);
+      }
+    }
+    return byLine;
   }
 
   void inactiveRule(String ruleKey) {
