@@ -183,10 +183,51 @@ public class IssueKeyTest {
     assertThat(location.byteLength).isNull();
   }
 
+  @Test
+  public void malformed_utf8_preserves_character_locations_without_inventing_byte_offsets() throws Exception {
+    byte[] bytes = {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF, 'a', (byte) 0xC3, '(', '\r', '\n', 'b'};
+    IssueLocation location = locate(bytes, StandardCharsets.UTF_8, range(2, 0, 2, 1));
+    assertThat(location.startLine).isEqualTo(2);
+    assertThat(location.startColumn).isEqualTo(1);
+    assertThat(location.charOffset).isEqualTo(5);
+    assertThat(location.charLength).isEqualTo(1);
+    assertThat(location.byteOffset).isNull();
+    assertThat(location.byteLength).isNull();
+  }
+
+  @Test
+  public void truncated_utf8_is_replaced_at_end_of_file() throws Exception {
+    IssueLocation location = locate(new byte[] {'a', (byte) 0xE2, (byte) 0x82}, StandardCharsets.UTF_8, range(1, 1, 1, 2));
+    assertThat(location.charOffset).isEqualTo(1);
+    assertThat(location.charLength).isEqualTo(1);
+    assertThat(location.byteOffset).isNull();
+    assertThat(location.byteLength).isNull();
+  }
+
+  @Test
+  public void malformed_utf16_does_not_use_fixed_width_byte_offsets() throws Exception {
+    IssueLocation location = locate(new byte[] {'a', 0, 'b'}, StandardCharsets.UTF_16LE, range(1, 1, 1, 2));
+    assertThat(location.charOffset).isEqualTo(1);
+    assertThat(location.charLength).isEqualTo(1);
+    assertThat(location.byteOffset).isNull();
+    assertThat(location.byteLength).isNull();
+  }
+
+  @Test
+  public void valid_replacement_character_keeps_precise_byte_offsets() throws Exception {
+    IssueLocation location = locate("a\uFFFD", StandardCharsets.UTF_8, range(1, 1, 1, 2));
+    assertThat(location.byteOffset).isEqualTo(1);
+    assertThat(location.byteLength).isEqualTo(3);
+  }
+
   private static IssueLocation locate(String text, Charset charset, TextRange range) throws Exception {
+    return locate(text.getBytes(charset), charset, range);
+  }
+
+  private static IssueLocation locate(byte[] bytes, Charset charset, TextRange range) throws Exception {
     InputFile file = mock(InputFile.class);
     when(file.charset()).thenReturn(charset);
-    when(file.inputStream()).thenReturn(new ByteArrayInputStream(text.getBytes(charset)));
+    when(file.inputStream()).thenReturn(new ByteArrayInputStream(bytes));
     return new IssueLocation.Source(file).locate(range);
   }
 
