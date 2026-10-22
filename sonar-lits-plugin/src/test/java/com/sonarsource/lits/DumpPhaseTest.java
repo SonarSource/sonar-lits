@@ -21,6 +21,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import com.sonarsource.lits.IssueKey.IssueLocation;
+import com.sonarsource.lits.sarif.Region;
+import org.sonar.api.batch.fs.TextRange;
+import org.sonar.api.batch.fs.InputFile;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -120,6 +124,28 @@ public class DumpPhaseTest {
     decorator.save();
 
     verify(checker).missingResource("missing");
+  }
+
+  @Test
+  public void missing_issues_preserve_expected_precise_range() {
+    sensorContext = SensorContextTester.create(temporaryFolder.getRoot());
+    InputFile file = TestInputFileBuilder.create("", "precise.cpp")
+      .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents("abcd\nefgh\n").build();
+    sensorContext.fileSystem().add(file);
+    Multiset<IssueKey> issues = Multiset.create();
+    issues.add(new IssueKey("", "squid:S00103", 1, "expected", new IssueLocation(new Region().withStartLine(1).withStartColumn(2).withEndLine(2).withEndColumn(3)
+      .withCharOffset(null).withCharLength(null).withByteOffset(null).withByteLength(null))));
+    when(checker.getByComponentKey(anyString())).thenReturn(Multiset.empty());
+    when(checker.getByComponentKey(file.key())).thenReturn(issues);
+    activeRules = new ActiveRulesBuilder()
+      .addRule(new NewActiveRule.Builder().setRuleKey(RuleKey.of("squid", "S00103")).build()).build();
+    decorator = new DumpPhase(checker, activeRules);
+    decorator.execute(sensorContext);
+    TextRange range = sensorContext.allIssues().iterator().next().primaryLocation().textRange();
+    assertThat(range.start().line()).isEqualTo(1);
+    assertThat(range.start().lineOffset()).isEqualTo(1);
+    assertThat(range.end().line()).isEqualTo(2);
+    assertThat(range.end().lineOffset()).isEqualTo(2);
   }
 
 }
