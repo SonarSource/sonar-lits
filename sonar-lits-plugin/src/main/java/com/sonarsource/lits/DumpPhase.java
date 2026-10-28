@@ -107,8 +107,11 @@ public class DumpPhase implements ProjectSensor {
 
   private static TextRange expectedRange(InputFile file, IssueKey issueKey) {
     IssueLocation precise = issueKey.location;
-    return precise == null ? file.selectLine(issueKey.line)
-      : file.newRange(precise.startLine, precise.startColumn - 1, precise.endLine, precise.endColumn - 1);
+    if (precise == null || (precise.startLine == precise.endLine && precise.startColumn == precise.endColumn)) {
+      // empty ranges are rejected by InputFile.newRange
+      return file.selectLine(issueKey.line);
+    }
+    return file.newRange(precise.startLine, precise.startColumn - 1, precise.endLine, precise.endColumn - 1);
   }
 
   void save() {

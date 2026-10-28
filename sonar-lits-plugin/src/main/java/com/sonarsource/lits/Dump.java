@@ -62,7 +62,7 @@ class Dump {
   private static final String LEGACY_EXT = "json";
   private static final ObjectMapper SARIF_MAPPER = new ObjectMapper()
     .registerModule(new Jdk8Module())
-    .setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
+    .setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY);
 
   private static final ObjectMapper LEGACY_MAPPER = JsonMapper.builder()
     .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)

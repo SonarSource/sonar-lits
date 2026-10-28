@@ -148,4 +148,24 @@ public class DumpPhaseTest {
     assertThat(range.end().lineOffset()).isEqualTo(2);
   }
 
+  @Test
+  public void missing_issues_with_empty_expected_range_select_line() {
+    sensorContext = SensorContextTester.create(temporaryFolder.getRoot());
+    InputFile file = TestInputFileBuilder.create("", "empty.cpp")
+      .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents("abcd\n\nefgh\n").build();
+    sensorContext.fileSystem().add(file);
+    Multiset<IssueKey> issues = Multiset.create();
+    issues.add(new IssueKey("", "squid:S00103", 2, "expected", new IssueLocation(new Region().withStartLine(2).withStartColumn(1).withEndLine(2).withEndColumn(1)
+      .withCharOffset(null).withCharLength(null).withByteOffset(null).withByteLength(null))));
+    when(checker.getByComponentKey(anyString())).thenReturn(Multiset.empty());
+    when(checker.getByComponentKey(file.key())).thenReturn(issues);
+    activeRules = new ActiveRulesBuilder()
+      .addRule(new NewActiveRule.Builder().setRuleKey(RuleKey.of("squid", "S00103")).build()).build();
+    decorator = new DumpPhase(checker, activeRules);
+    decorator.execute(sensorContext);
+    TextRange range = sensorContext.allIssues().iterator().next().primaryLocation().textRange();
+    assertThat(range.start().line()).isEqualTo(2);
+    assertThat(range.end().line()).isEqualTo(2);
+  }
+
 }
