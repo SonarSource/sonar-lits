@@ -16,6 +16,8 @@
  */
 package com.sonarsource.lits;
 
+import com.sonarsource.lits.IssueKey.IssueLocation;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -90,8 +92,7 @@ public class DumpPhase implements ProjectSensor {
           .on(resource)
           .message(issueKey.message == null ? "Missing" : ("Missing: " + issueKey.message));
         if (issueKey.line != 0) {
-          TextRange textRange = ((InputFile) resource).selectLine(issueKey.line);
-          location.at(textRange);
+          location.at(expectedRange((InputFile) resource, issueKey));
         }
         newIssue
           .forRule(ruleKey)
@@ -102,6 +103,15 @@ public class DumpPhase implements ProjectSensor {
       checker.disabled = false;
       componentIssues.clear();
     }
+  }
+
+  private static TextRange expectedRange(InputFile file, IssueKey issueKey) {
+    IssueLocation precise = issueKey.location;
+    if (precise == null || (precise.startLine == precise.endLine && precise.startColumn == precise.endColumn)) {
+      // empty ranges are rejected by InputFile.newRange
+      return file.selectLine(issueKey.line);
+    }
+    return file.newRange(precise.startLine, precise.startColumn - 1, precise.endLine, precise.endColumn - 1);
   }
 
   void save() {

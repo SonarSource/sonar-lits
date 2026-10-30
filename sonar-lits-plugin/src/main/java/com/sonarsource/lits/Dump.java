@@ -16,6 +16,9 @@
  */
 package com.sonarsource.lits;
 
+import com.sonarsource.lits.IssueKey.IssueLocation;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,7 +61,8 @@ class Dump {
   private static final String SARIF_EXT = "sarif";
   private static final String LEGACY_EXT = "json";
   private static final ObjectMapper SARIF_MAPPER = new ObjectMapper()
-    .registerModule(new Jdk8Module());
+    .registerModule(new Jdk8Module())
+    .setDefaultPropertyInclusion(JsonInclude.Include.NON_EMPTY);
 
   private static final ObjectMapper LEGACY_MAPPER = JsonMapper.builder()
     .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
@@ -134,7 +138,8 @@ class Dump {
       .flatMap(physical -> physical.getArtifactLocation()
         .flatMap(ArtifactLocation::getUri)
         .map(componentKey -> new IssueKey(componentKey, ruleKey,
-          physical.getRegion().flatMap(Region::getStartLine).orElse(null), issueMessage)))
+          physical.getRegion().flatMap(Region::getStartLine).orElse(null), issueMessage,
+          IssueLocation.fromRegion(physical.getRegion().orElse(null)))))
       .orElse(null);
   }
 
@@ -164,6 +169,7 @@ class Dump {
       .with$schema(URI.create("https://json.schemastore.org/sarif-2.1.0.json"))
       .withVersion(Version._2_1_0)
       .withRuns(Collections.singletonList(new Run()
+        .withColumnKind(Run.ColumnKind.fromValue("utf16CodeUnits"))
         .withTool(new Tool().withDriver(new ToolComponent().withName("LITS")))
         .withResults(issues.stream().map(Dump::issueToResult).collect(Collectors.toList()))));
 
@@ -180,7 +186,9 @@ class Dump {
     PhysicalLocation physicalLocation = new PhysicalLocation()
       .withArtifactLocation(new ArtifactLocation().withUri(issue.componentKey));
     if (issue.line != 0) {
-      physicalLocation.withRegion(new Region().withStartLine(issue.line).withEndLine(issue.line));
+      physicalLocation.withRegion(issue.location == null
+        ? new Region().withStartLine(issue.line).withEndLine(issue.line).withCharOffset(null).withByteOffset(null)
+        : issue.location.toRegion());
     }
     return new Result()
       .withRuleId(issue.ruleKey)
@@ -228,7 +236,7 @@ class Dump {
       if (c == 0) {
         c = left.componentKey.compareTo(right.componentKey);
         if (c == 0) {
-          c = left.line - right.line;
+          c = left.compareTo(right);
           if (c == 0) {
             c = Comparator.nullsFirst(String::compareTo).compare(left.message, right.message);
           }
