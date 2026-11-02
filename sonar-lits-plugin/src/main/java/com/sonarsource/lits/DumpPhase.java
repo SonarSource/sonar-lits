@@ -16,8 +16,6 @@
  */
 package com.sonarsource.lits;
 
-import com.sonarsource.lits.IssueKey.IssueLocation;
-
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -106,12 +104,8 @@ public class DumpPhase implements ProjectSensor {
   }
 
   private static TextRange expectedRange(InputFile file, IssueKey issueKey) {
-    IssueLocation precise = issueKey.location;
-    if (precise == null || (precise.startLine == precise.endLine && precise.startColumn == precise.endColumn)) {
-      // empty ranges are rejected by InputFile.newRange
-      return file.selectLine(issueKey.line);
-    }
-    return file.newRange(precise.startLine, precise.startColumn - 1, precise.endLine, precise.endColumn - 1);
+    // The expected source may no longer match the current file. A line range is always safe to display.
+    return file.selectLine(issueKey.line);
   }
 
   void save() {

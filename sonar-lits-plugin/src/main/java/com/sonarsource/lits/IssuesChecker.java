@@ -139,7 +139,7 @@ public class IssuesChecker implements IssueFilter {
   }
 
   private static boolean removeExpected(Multiset<IssueKey> expectedIssues, IssueKey actual) {
-    return expectedIssues.remove(actual) || expectedIssues.remove(new IssueKey(actual.componentKey, actual.ruleKey, actual.line));
+    return expectedIssues.remove(actual);
   }
 
   void inactiveRule(String ruleKey) {

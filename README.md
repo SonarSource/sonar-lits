@@ -8,9 +8,9 @@ SARIF lines and columns are one-based; columns use UTF-16 code units.
 Character and byte offsets and lengths are omitted, including when supplied in input baselines.
 Issues without a text range remain line-only or file-level; LITS does not invent columns.
 
-Precise expectations compare ranges. Legacy JSON and line-only SARIF
-expectations continue to match by line. Multiple issues at different columns on the same line
-remain distinct, and missing-issue diagnostics use the expected range.
+Issue comparisons include the rule, message, and range. Multiple issues at different columns
+on the same line remain distinct. Missing-issue diagnostics are shown on the expected line so
+they remain valid when the current file no longer has the expected columns or lines.
 
 ### License
 

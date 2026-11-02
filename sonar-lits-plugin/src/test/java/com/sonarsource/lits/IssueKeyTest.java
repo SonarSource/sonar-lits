@@ -70,7 +70,8 @@ public class IssueKeyTest {
     IssueKey secondKey = new IssueKey("file", "rule", 1, null, second);
     assertThat(firstKey).isNotEqualTo(secondKey);
     assertThat(firstKey.compareTo(secondKey)).isLessThan(0);
-    assertThat(firstKey).isEqualTo(new IssueKey("file", "rule", 1, "different message", first));
+    assertThat(firstKey).isNotEqualTo(new IssueKey("file", "rule", 1, "different message", first));
+    assertThat(firstKey.compareTo(new IssueKey("file", "rule", 1, "different message", first))).isLessThan(0);
     assertThat(firstKey.hashCode()).isEqualTo(new IssueKey("file", "rule", 1, null, first).hashCode());
     assertThat(firstKey).isNotEqualTo(new IssueKey("file", "rule", 1));
     Multiset<IssueKey> issues = Multiset.create();

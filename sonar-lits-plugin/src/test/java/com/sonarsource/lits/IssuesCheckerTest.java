@@ -173,13 +173,6 @@ public class IssuesCheckerTest {
   }
 
   @Test
-  public void precise_actual_issues_still_match_legacy_line_expectations() {
-    FilterableIssue issue = preciseIssue("project:src/Example.java", IssueKeyTest.range(1, 2, 1, 4));
-    assertThat(checker.accept(issue, chainReturnTrue)).isFalse();
-    assertThat(checker.getByComponentKey(issue.componentKey()).contains(new IssueKey(issue.componentKey(), "squid:S00103", 1))).isFalse();
-  }
-
-  @Test
   public void precise_expectations_detect_column_and_end_range_changes() {
     TextRange range = IssueKeyTest.range(1, 2, 2, 4);
     FilterableIssue issue = preciseIssue("file", range);
@@ -192,45 +185,25 @@ public class IssuesCheckerTest {
   }
 
   @Test
-  public void same_line_precise_expectations_are_consumed_separately_before_legacy_fallback() {
+  public void same_line_precise_expectations_are_consumed_separately() {
     TextRange first = IssueKeyTest.range(1, 2, 1, 4);
     TextRange second = IssueKeyTest.range(1, 6, 1, 8);
     Multiset<IssueKey> previous = expected("file", IssueLocation.fromRange(first));
     previous.add(new IssueKey("file", "squid:S00103", 1, null, IssueLocation.fromRange(second)));
-    previous.add(new IssueKey("file", "squid:S00103", 1));
     assertThat(checker.accept(preciseIssue("file", second), chainReturnTrue)).isFalse();
-    assertThat(previous.contains(new IssueKey("file", "squid:S00103", 1))).isTrue();
     assertThat(checker.accept(preciseIssue("file", first), chainReturnTrue)).isFalse();
-    assertThat(checker.accept(preciseIssue("file", first), chainReturnTrue)).isFalse();
-    assertThat(checker.accept(preciseIssue("file", second), chainReturnTrue)).isTrue();
-  }
-
-  @Test
-  public void legacy_expectations_do_not_require_scanning_precise_candidates() {
-    Multiset<IssueKey> previous = spy(Multiset.create());
-    for (int line = 1; line <= 100; line++) {
-      previous.add(new IssueKey("file", "squid:S00103", line));
-    }
-    checker.getPrevious().put("file", previous);
-    for (int line = 1; line <= 100; line++) {
-      assertThat(checker.accept(preciseIssue("file", IssueKeyTest.range(line, 2, line, 4)), chainReturnTrue)).isFalse();
-    }
     assertThat(previous.isEmpty()).isTrue();
-    verify(previous, never()).iterator();
   }
 
   @Test
-  public void precise_expectations_are_preferred_and_exact_matches_are_not_reused() {
+  public void precise_expectations_are_not_reused() {
     InputFile file = TestInputFileBuilder.create("project", "example.as")
       .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents("abcdefgh").setCharset(StandardCharsets.UTF_8).build();
     TextRange first = file.newRange(1, 1, 1, 2);
     TextRange second = file.newRange(1, 4, 1, 5);
     Multiset<IssueKey> previous = expected(file.key(), IssueLocation.fromRange(first));
     previous.add(new IssueKey(file.key(), "squid:S00103", 1, null, IssueLocation.fromRange(second)));
-    previous.add(new IssueKey(file.key(), "squid:S00103", 1));
     assertThat(checker.accept(preciseIssue(file.key(), first), chainReturnTrue)).isFalse();
-    assertThat(previous.contains(new IssueKey(file.key(), "squid:S00103", 1))).isTrue();
-    assertThat(checker.accept(preciseIssue(file.key(), second), chainReturnTrue)).isFalse();
     assertThat(checker.accept(preciseIssue(file.key(), second), chainReturnTrue)).isFalse();
     assertThat(checker.accept(preciseIssue(file.key(), second), chainReturnTrue)).isTrue();
     assertThat(previous.isEmpty()).isTrue();

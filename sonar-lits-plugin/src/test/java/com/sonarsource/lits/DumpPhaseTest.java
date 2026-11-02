@@ -127,7 +127,7 @@ public class DumpPhaseTest {
   }
 
   @Test
-  public void missing_issues_preserve_expected_precise_range() {
+  public void missing_issues_select_the_expected_line() {
     sensorContext = SensorContextTester.create(temporaryFolder.getRoot());
     InputFile file = TestInputFileBuilder.create("", "precise.cpp")
       .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents("abcd\nefgh\n").build();
@@ -143,9 +143,9 @@ public class DumpPhaseTest {
     decorator.execute(sensorContext);
     TextRange range = sensorContext.allIssues().iterator().next().primaryLocation().textRange();
     assertThat(range.start().line()).isEqualTo(1);
-    assertThat(range.start().lineOffset()).isEqualTo(1);
-    assertThat(range.end().line()).isEqualTo(2);
-    assertThat(range.end().lineOffset()).isEqualTo(2);
+    assertThat(range.start().lineOffset()).isEqualTo(0);
+    assertThat(range.end().line()).isEqualTo(1);
+    assertThat(range.end().lineOffset()).isEqualTo(4);
   }
 
   @Test

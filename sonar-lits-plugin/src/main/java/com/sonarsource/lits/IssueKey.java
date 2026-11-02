@@ -60,6 +60,7 @@ class IssueKey implements Comparable<IssueKey> {
       return this.line == other.line
         && Objects.equals(this.componentKey, other.componentKey)
         && Objects.equals(this.ruleKey, other.ruleKey)
+        && Objects.equals(this.message, other.message)
         && Objects.equals(this.location, other.location);
     }
     return false;
@@ -68,7 +69,7 @@ class IssueKey implements Comparable<IssueKey> {
   @Override
   public int hashCode() {
     // Godin: maybe would be better for performance to cache hash code
-    return Objects.hash(componentKey, ruleKey, line, location);
+    return Objects.hash(componentKey, ruleKey, line, message, location);
   }
 
   @Override
@@ -86,6 +87,9 @@ class IssueKey implements Comparable<IssueKey> {
         c = this.line - other.line;
         if (c == 0) {
           c = Comparator.nullsFirst(IssueLocation::compareTo).compare(location, other.location);
+          if (c == 0) {
+            c = Comparator.nullsFirst(String::compareTo).compare(message, other.message);
+          }
         }
       }
     }
