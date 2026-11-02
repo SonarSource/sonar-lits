@@ -185,6 +185,27 @@ public class IssuesCheckerTest {
   }
 
   @Test
+  public void legacy_expectations_without_ranges_match_precise_issues() {
+    TextRange range = IssueKeyTest.range(1, 2, 1, 4);
+
+    FilterableIssue issueWithMessage = preciseIssue("message-file", range);
+    when(issueWithMessage.message()).thenReturn("legacy message");
+    Multiset<IssueKey> expectedWithMessage = Multiset.create();
+    expectedWithMessage.add(new IssueKey("message-file", "squid:S00103", 1, "legacy message"));
+    checker.getPrevious().put("message-file", expectedWithMessage);
+    assertThat(checker.accept(issueWithMessage, chainReturnTrue)).isFalse();
+    assertThat(expectedWithMessage.isEmpty()).isTrue();
+
+    FilterableIssue issueWithoutMatchingMessage = preciseIssue("line-file", range);
+    when(issueWithoutMatchingMessage.message()).thenReturn("new message");
+    Multiset<IssueKey> expectedByLine = Multiset.create();
+    expectedByLine.add(new IssueKey("line-file", "squid:S00103", 1));
+    checker.getPrevious().put("line-file", expectedByLine);
+    assertThat(checker.accept(issueWithoutMatchingMessage, chainReturnTrue)).isFalse();
+    assertThat(expectedByLine.isEmpty()).isTrue();
+  }
+
+  @Test
   public void same_line_precise_expectations_are_consumed_separately() {
     TextRange first = IssueKeyTest.range(1, 2, 1, 4);
     TextRange second = IssueKeyTest.range(1, 6, 1, 8);
