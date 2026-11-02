@@ -16,11 +16,15 @@
  */
 package com.sonarsource.lits;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.sonarsource.lits.sarif.ArtifactLocation;
 import com.sonarsource.lits.sarif.Location;
 import com.sonarsource.lits.sarif.Message;
@@ -43,6 +47,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,6 +55,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -58,7 +64,8 @@ class Dump {
   private static final String SARIF_EXT = "sarif";
   private static final String LEGACY_EXT = "json";
   private static final ObjectMapper SARIF_MAPPER = new ObjectMapper()
-    .registerModule(new Jdk8Module());
+    .registerModule(new Jdk8Module())
+    .registerModule(new SimpleModule().addSerializer(Optional.class, new EmptyCollectionOptionalSerializer()));
 
   private static final ObjectMapper LEGACY_MAPPER = JsonMapper.builder()
     .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
@@ -67,6 +74,22 @@ class Dump {
     .build();
 
   private Dump() {
+  }
+
+  private static class EmptyCollectionOptionalSerializer extends JsonSerializer<Optional> {
+    @Override
+    public void serialize(Optional optional, JsonGenerator generator, SerializerProvider provider) throws IOException {
+      if (optional.isPresent()) {
+        provider.defaultSerializeValue(optional.get(), generator);
+      } else {
+        provider.defaultSerializeNull(generator);
+      }
+    }
+
+    @Override
+    public boolean isEmpty(SerializerProvider provider, Optional optional) {
+      return !optional.isPresent() || (optional.get() instanceof Collection && ((Collection<?>) optional.get()).isEmpty());
+    }
   }
 
   static Map<String, Multiset<IssueKey>> load(File dir) {
