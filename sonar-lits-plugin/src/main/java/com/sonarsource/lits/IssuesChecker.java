@@ -28,15 +28,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.sonar.api.batch.rule.ActiveRule;
-import org.sonar.api.batch.fs.FileSystem;
-import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.TextRange;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.config.Configuration;
@@ -57,12 +54,6 @@ public class IssuesChecker implements IssueFilter {
   private final File oldDumpFile;
   private final File newDumpFile;
   private final File differencesFile;
-  private final FileSystem fileSystem;
-  private InputFile cachedFile;
-  private IssueLocation.Source cachedSource;
-  private final Map<String, Map<IssueKey, Multiset<IssueKey>>> preciseExpectations = new HashMap<>();
-  private final Map<String, InputFile> inputFiles = new HashMap<>();
-  private boolean indexedFiles;
 
   /**
    * Previous findings indexed by {@link IssueKey#componentKey}.
@@ -82,8 +73,7 @@ public class IssuesChecker implements IssueFilter {
   int differences = 0;
 
   // must be public for SQ picocontainer
-  public IssuesChecker(Configuration settings, ActiveRules activerules, FileSystem fileSystem) {
-    this.fileSystem = fileSystem;
+  public IssuesChecker(Configuration settings, ActiveRules activerules) {
     oldDumpFile = getFile(settings, LITSPlugin.OLD_DUMP_PROPERTY);
     newDumpFile = getFile(settings, LITSPlugin.NEW_DUMP_PROPERTY);
     differencesFile = getFile(settings, LITSPlugin.DIFFERENCES_PROPERTY);
@@ -143,66 +133,13 @@ public class IssuesChecker implements IssueFilter {
   }
 
   @Nullable
-  private IssueLocation location(FilterableIssue issue) {
+  private static IssueLocation location(FilterableIssue issue) {
     TextRange range = issue.textRange();
-    if (range == null) {
-      return null;
-    }
-    if (!indexedFiles) {
-      for (InputFile file : fileSystem.inputFiles(fileSystem.predicates().all())) {
-        inputFiles.put(file.key(), file);
-      }
-      indexedFiles = true;
-    }
-    InputFile file = inputFiles.get(issue.componentKey());
-    if (file == null) {
-      return IssueLocation.fromRange(range);
-    }
-    if (cachedSource == null || cachedFile != file) {
-      try {
-        cachedSource = new IssueLocation.Source(file);
-        cachedFile = file;
-      } catch (IOException exception) {
-        throw new UncheckedIOException(exception);
-      }
-    }
-    return cachedSource.locate(range);
+    return range == null ? null : IssueLocation.fromRange(range);
   }
 
-  private boolean removeExpected(Multiset<IssueKey> expectedIssues, IssueKey actual) {
-    IssueKey lineOnly = new IssueKey(actual.componentKey, actual.ruleKey, actual.line);
-    Map<IssueKey, Multiset<IssueKey>> byLine = preciseExpectations.get(actual.componentKey);
-    Multiset<IssueKey> candidates = byLine == null ? null : byLine.get(lineOnly);
-    if (expectedIssues.remove(actual)) {
-      if (candidates != null) {
-        candidates.remove(actual);
-      }
-      return true;
-    }
-    if (byLine == null) {
-      byLine = preciseExpectations.computeIfAbsent(actual.componentKey, key -> indexPreciseExpectations(expectedIssues));
-    }
-    candidates = byLine.get(lineOnly);
-    if (candidates != null) {
-      for (IssueKey expected : candidates) {
-        if (expected.location.matches(actual.location)) {
-          candidates.remove(expected);
-          return expectedIssues.remove(expected);
-        }
-      }
-    }
-    return expectedIssues.remove(lineOnly);
-  }
-
-  private static Map<IssueKey, Multiset<IssueKey>> indexPreciseExpectations(Multiset<IssueKey> expectedIssues) {
-    Map<IssueKey, Multiset<IssueKey>> byLine = new HashMap<>();
-    for (IssueKey expected : expectedIssues) {
-      if (expected.location != null) {
-        IssueKey lineOnly = new IssueKey(expected.componentKey, expected.ruleKey, expected.line);
-        byLine.computeIfAbsent(lineOnly, key -> Multiset.create()).add(expected);
-      }
-    }
-    return byLine;
+  private static boolean removeExpected(Multiset<IssueKey> expectedIssues, IssueKey actual) {
+    return expectedIssues.remove(actual) || expectedIssues.remove(new IssueKey(actual.componentKey, actual.ruleKey, actual.line));
   }
 
   void inactiveRule(String ruleKey) {

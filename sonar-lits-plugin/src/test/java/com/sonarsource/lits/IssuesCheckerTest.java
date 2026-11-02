@@ -25,7 +25,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.sonar.api.batch.rule.ActiveRules;
-import org.sonar.scanner.plugin.api.impl.fs.DefaultFileSystem;
 import com.sonarsource.lits.IssueKey.IssueLocation;
 import com.sonarsource.lits.sarif.Region;
 import com.sonarsource.scanner.engine.sensor.test.fixtures.TestInputFileBuilder;
@@ -47,7 +46,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -61,7 +60,6 @@ public class IssuesCheckerTest {
 
   private ActiveRules activeRules;
   private IssuesChecker checker;
-  private DefaultFileSystem fileSystem;
   private File output;
   private File assertion;
   private IssueFilterChain chainReturnTrue = (issue) -> true;
@@ -73,15 +71,14 @@ public class IssuesCheckerTest {
     assertion = new File(temporaryFolder.newFolder(), "assertion");
     Configuration settings = newCorrectSettings().asConfig();
     activeRules = new ActiveRulesBuilder().build();
-    fileSystem = new DefaultFileSystem(temporaryFolder.getRoot());
-    checker = new IssuesChecker(settings, activeRules, fileSystem);
+    checker = new IssuesChecker(settings, activeRules);
   }
 
   @Test
   public void path_must_be_specified() {
     Configuration settings = new MapSettings().asConfig();
     MessageException e = assertThrows(MessageException.class, () ->
-      new IssuesChecker(settings, activeRules, null));
+      new IssuesChecker(settings, activeRules));
     assertEquals("Missing property 'sonar.lits.dump.old'", e.getMessage());
   }
 
@@ -91,7 +88,7 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, "target/dump.json");
     Configuration configuration = settings.asConfig();
     MessageException e = assertThrows(MessageException.class, () ->
-        new IssuesChecker(configuration, activeRules, fileSystem));
+        new IssuesChecker(configuration, activeRules));
     assertEquals("Path must be absolute - check property 'sonar.lits.dump.old'", e.getMessage());
   }
 
@@ -101,7 +98,7 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, (String) null);
     Configuration configuration = settings.asConfig();
     MessageException e = assertThrows(MessageException.class, () ->
-      new IssuesChecker(configuration, activeRules, fileSystem));
+      new IssuesChecker(configuration, activeRules));
     assertEquals("Missing property 'sonar.lits.differences'", e.getMessage());
   }
 
@@ -116,7 +113,7 @@ public class IssuesCheckerTest {
       .build();
 
     MessageException e = assertThrows(MessageException.class, () ->
-      new IssuesChecker(settings, activeRules, null));
+      new IssuesChecker(settings, activeRules));
     assertEquals("Rule 'repositoryKey:ruleKey' must be declared with severity INFO", e.getMessage());
   }
 
@@ -209,7 +206,7 @@ public class IssuesCheckerTest {
   }
 
   @Test
-  public void legacy_expectations_are_indexed_only_once_per_component() {
+  public void legacy_expectations_do_not_require_scanning_precise_candidates() {
     Multiset<IssueKey> previous = spy(Multiset.create());
     for (int line = 1; line <= 100; line++) {
       previous.add(new IssueKey("file", "squid:S00103", line));
@@ -219,35 +216,17 @@ public class IssuesCheckerTest {
       assertThat(checker.accept(preciseIssue("file", IssueKeyTest.range(line, 2, line, 4)), chainReturnTrue)).isFalse();
     }
     assertThat(previous.isEmpty()).isTrue();
-    verify(previous).iterator();
+    verify(previous, never()).iterator();
   }
 
   @Test
-  public void source_cache_reuses_only_the_most_recent_file() throws IOException {
-    InputFile first = spy(TestInputFileBuilder.create("project", "first.as")
-      .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents("abcd").setCharset(StandardCharsets.UTF_8).build());
-    InputFile second = spy(TestInputFileBuilder.create("project", "second.as")
-      .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents("abcd").setCharset(StandardCharsets.UTF_8).build());
-    fileSystem.add(first);
-    fileSystem.add(second);
-    TextRange range = IssueKeyTest.range(1, 1, 1, 2);
-    assertThat(checker.accept(preciseIssue(first.key(), range), chainReturnTrue)).isTrue();
-    assertThat(checker.accept(preciseIssue(first.key(), range), chainReturnTrue)).isTrue();
-    assertThat(checker.accept(preciseIssue(second.key(), range), chainReturnTrue)).isTrue();
-    assertThat(checker.accept(preciseIssue(first.key(), range), chainReturnTrue)).isTrue();
-    verify(first, times(2)).inputStream();
-    verify(second).inputStream();
-  }
-
-  @Test
-  public void indexed_precise_expectations_are_preferred_and_exact_matches_are_not_reused() throws IOException {
+  public void precise_expectations_are_preferred_and_exact_matches_are_not_reused() {
     InputFile file = TestInputFileBuilder.create("project", "example.as")
       .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents("abcdefgh").setCharset(StandardCharsets.UTF_8).build();
-    fileSystem.add(file);
     TextRange first = file.newRange(1, 1, 1, 2);
     TextRange second = file.newRange(1, 4, 1, 5);
     Multiset<IssueKey> previous = expected(file.key(), IssueLocation.fromRange(first));
-    previous.add(new IssueKey(file.key(), "squid:S00103", 1, null, new IssueLocation.Source(file).locate(second)));
+    previous.add(new IssueKey(file.key(), "squid:S00103", 1, null, IssueLocation.fromRange(second)));
     previous.add(new IssueKey(file.key(), "squid:S00103", 1));
     assertThat(checker.accept(preciseIssue(file.key(), first), chainReturnTrue)).isFalse();
     assertThat(previous.contains(new IssueKey(file.key(), "squid:S00103", 1))).isTrue();
@@ -258,20 +237,18 @@ public class IssuesCheckerTest {
   }
 
   @Test
-  public void capture_and_save_use_source_content_and_encoding() {
-    InputFile file = TestInputFileBuilder.create("project", "example.java")
+  public void capture_and_save_preserve_ranges_without_reading_source() throws IOException {
+    InputFile file = spy(TestInputFileBuilder.create("project", "example.java")
       .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents("aé\r\nbé\n")
-      .setCharset(StandardCharsets.UTF_8).build();
-    fileSystem.add(file);
+      .setCharset(StandardCharsets.UTF_8).build());
     TextRange range = file.newRange(2, 1, 2, 2);
     FilterableIssue issue = preciseIssue(file.key(), range);
     assertThat(checker.accept(issue, chainReturnTrue)).isTrue();
     checker.save();
     IssueKey saved = Dump.load(output).get(file.key()).iterator().next();
-    assertThat(saved.location.charOffset).isEqualTo(5);
-    assertThat(saved.location.charLength).isEqualTo(1);
-    assertThat(saved.location.byteOffset).isEqualTo(6);
-    assertThat(saved.location.byteLength).isEqualTo(2);
+    assertThat(saved.location).isEqualTo(IssueLocation.fromRange(range));
+    verify(file, never()).inputStream();
+    verify(file, never()).charset();
   }
 
   @Test
@@ -282,7 +259,6 @@ public class IssuesCheckerTest {
     InputFile file = TestInputFileBuilder.create("project", "example.as")
       .setModuleBaseDir(temporaryFolder.getRoot().toPath()).setContents(new String(bytes, StandardCharsets.UTF_8))
       .setCharset(StandardCharsets.UTF_8).build();
-    fileSystem.add(file);
     FilterableIssue issue = preciseIssue(file.key(), file.newRange(2, 0, 2, 1));
     assertThat(checker.accept(issue, chainReturnTrue)).isTrue();
     checker.save();
@@ -290,19 +266,15 @@ public class IssuesCheckerTest {
     assertThat(saved.location.startLine).isEqualTo(2);
     assertThat(saved.location.startColumn).isEqualTo(1);
     assertThat(saved.location.endColumn).isEqualTo(2);
-    assertThat(saved.location.charOffset).isEqualTo(4);
-    assertThat(saved.location.charLength).isEqualTo(1);
-    assertThat(saved.location.byteOffset).isNull();
-    assertThat(saved.location.byteLength).isNull();
   }
 
   @Test
-  public void precise_offsets_are_checked_when_present_in_expectations() {
+  public void precise_offsets_are_ignored_when_present_in_expectations() {
     TextRange range = IssueKeyTest.range(1, 2, 1, 4);
     Multiset<IssueKey> previous = expected("file", new IssueLocation(new Region().withStartLine(1).withStartColumn(3).withEndLine(1).withEndColumn(5)
-      .withCharOffset(2).withCharLength(2).withByteOffset(2).withByteLength(2)));
-    assertThat(checker.accept(preciseIssue("file", range), chainReturnTrue)).isTrue();
-    assertThat(previous.size()).isEqualTo(1);
+      .withCharOffset(42).withCharLength(7).withByteOffset(99).withByteLength(12)));
+    assertThat(checker.accept(preciseIssue("file", range), chainReturnTrue)).isFalse();
+    assertThat(previous.isEmpty()).isTrue();
   }
 
   private Multiset<IssueKey> expected(String component, IssueLocation location) {
@@ -351,7 +323,7 @@ public class IssuesCheckerTest {
     settings.setProperty(LITSPlugin.OLD_DUMP_PROPERTY, nonExistingPath);
     settings.setProperty(LITSPlugin.NEW_DUMP_PROPERTY, nonExistingPath);
     settings.setProperty(LITSPlugin.DIFFERENCES_PROPERTY, nonExistingPath);
-    checker = new IssuesChecker(settings.asConfig(), activeRules, new DefaultFileSystem(temporaryFolder.getRoot()));
+    checker = new IssuesChecker(settings.asConfig(), activeRules);
 
     Map previous = checker.getPrevious();
 
