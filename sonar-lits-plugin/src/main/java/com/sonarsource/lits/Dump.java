@@ -180,7 +180,11 @@ class Dump {
     PhysicalLocation physicalLocation = new PhysicalLocation()
       .withArtifactLocation(new ArtifactLocation().withUri(issue.componentKey));
     if (issue.line != 0) {
-      physicalLocation.withRegion(new Region().withStartLine(issue.line).withEndLine(issue.line));
+      physicalLocation.withRegion(new Region()
+        .withStartLine(issue.line)
+        .withEndLine(issue.line)
+        .withCharOffset(null)
+        .withByteOffset(null));
     }
     return new Result()
       .withRuleId(issue.ruleKey)
