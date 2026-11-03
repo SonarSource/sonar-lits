@@ -185,6 +185,17 @@ public class IssuesCheckerTest {
   }
 
   @Test
+  public void precise_actual_issues_still_match_legacy_line_expectations() {
+    TextRange range = IssueKeyTest.range(1, 2, 1, 4);
+    Multiset<IssueKey> previous = Multiset.create();
+    previous.add(new IssueKey("file", "squid:S00103", 1));
+    checker.getPrevious().put("file", previous);
+
+    assertThat(checker.accept(preciseIssue("file", range, "analyzer message"), chainReturnTrue)).isFalse();
+    assertThat(previous.isEmpty()).isTrue();
+  }
+
+  @Test
   public void same_line_precise_expectations_are_consumed_separately() {
     TextRange first = IssueKeyTest.range(1, 2, 1, 4);
     TextRange second = IssueKeyTest.range(1, 6, 1, 8);
@@ -241,10 +252,15 @@ public class IssuesCheckerTest {
   }
 
   private static FilterableIssue preciseIssue(String component, TextRange range) {
+    return preciseIssue(component, range, null);
+  }
+
+  private static FilterableIssue preciseIssue(String component, TextRange range, String message) {
     FilterableIssue issue = mock(FilterableIssue.class);
     when(issue.componentKey()).thenReturn(component);
     when(issue.ruleKey()).thenReturn(RuleKey.of("squid", "S00103"));
     when(issue.line()).thenReturn(range.start().line());
+    when(issue.message()).thenReturn(message);
     when(issue.textRange()).thenReturn(range);
     when(issue.severity()).thenReturn("INFO");
     return issue;
