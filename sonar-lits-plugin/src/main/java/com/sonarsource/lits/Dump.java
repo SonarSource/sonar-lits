@@ -64,6 +64,7 @@ class Dump {
 
   private static final String SARIF_EXT = "sarif";
   private static final String LEGACY_EXT = "json";
+  private static final String NULL_MESSAGE = "null";
   private static final ObjectMapper SARIF_MAPPER = new ObjectMapper()
     .registerModule(new Jdk8Module())
     .registerModule(new SimpleModule().addSerializer(Optional.class, new EmptyCollectionOptionalSerializer()));
@@ -146,7 +147,8 @@ class Dump {
 
   private static Stream<IssueKey> toIssueKeys(Result sarifResult, String fallbackRuleKey) {
     String ruleKey = sarifResult.getRuleId().orElse(fallbackRuleKey);
-    String issueMessage = sarifResult.getMessage() == null ? null : sarifResult.getMessage().getText().orElse(null);
+    String issueMessage = sarifResult.getMessage() == null ? null : sarifResult.getMessage().getText()
+      .filter(message -> !NULL_MESSAGE.equals(message)).orElse(null);
     return sarifResult.getLocations().orElse(Collections.emptyList()).stream()
       .map(location -> toIssueKey(location, ruleKey, issueMessage))
       .filter(Objects::nonNull);
@@ -212,7 +214,7 @@ class Dump {
     }
     return new Result()
       .withRuleId(issue.ruleKey)
-      .withMessage(new Message().withText(issue.message == null ? "Issue" : issue.message))
+      .withMessage(new Message().withText(issue.message == null ? NULL_MESSAGE : issue.message))
       .withLocations(Collections.singletonList(new Location().withPhysicalLocation(physicalLocation)));
   }
 

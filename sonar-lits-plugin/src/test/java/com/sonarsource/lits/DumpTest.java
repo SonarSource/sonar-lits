@@ -76,6 +76,27 @@ public class DumpTest {
   }
 
   @Test
+  public void null_and_non_null_messages_round_trip() throws Exception {
+    File directory = temporaryFolder.newFolder();
+    List<IssueKey> issues = new ArrayList<>();
+    issues.add(new IssueKey("file", "repo:rule", 1));
+    issues.add(new IssueKey("file", "repo:rule", 1, "Issue"));
+    issues.add(new IssueKey("file", "repo:rule", 1, ""));
+    issues.add(new IssueKey("file", "repo:rule", 1, "null message"));
+    issues.add(new IssueKey("file", "repo:rule", 1, "NULL"));
+
+    Dump.save(issues, directory);
+
+    String sarif = new String(Files.readAllBytes(new File(directory, "repo-rule.sarif").toPath()), StandardCharsets.UTF_8);
+    assertThat(sarif).contains("\"text\" : \"null\"");
+    Multiset<IssueKey> loaded = Dump.load(directory).get("file");
+    assertThat(loaded.size()).isEqualTo(issues.size());
+    for (IssueKey issue : issues) {
+      assertThat(loaded.contains(issue)).isTrue();
+    }
+  }
+
+  @Test
   public void load_legacy_with_trailing_commas() {
     File file = new File("src/test/resources/squid-S00104.json");
     Map<String, Multiset<IssueKey>> result = new HashMap<>();
