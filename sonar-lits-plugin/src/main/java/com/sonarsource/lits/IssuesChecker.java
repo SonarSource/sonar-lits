@@ -16,6 +16,8 @@
  */
 package com.sonarsource.lits;
 
+import com.sonarsource.lits.IssueKey.IssueLocation;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -30,7 +32,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import org.sonar.api.batch.rule.ActiveRule;
+import org.sonar.api.batch.fs.TextRange;
 import org.sonar.api.batch.rule.ActiveRules;
 import org.sonar.api.config.Configuration;
 import org.sonar.api.rule.RuleKey;
@@ -111,12 +115,11 @@ public class IssuesChecker implements IssueFilter {
       return true;
     }
 
-    IssueKey issueKey = new IssueKey(issue.componentKey(), issue.ruleKey().toString(), issue.line(), issue.message());
+    IssueKey issueKey = new IssueKey(issue.componentKey(), issue.ruleKey().toString(), issue.line(), issue.message(), location(issue));
     dump.add(issueKey);
     Multiset<IssueKey> componentIssues = getByComponentKey(issueKey.componentKey);
-    if (componentIssues.contains(issueKey)) {
+    if (removeExpected(componentIssues, issueKey)) {
       // old issue => no need to persist
-      componentIssues.remove(issueKey);
       if (!Severity.INFO.equals(issue.severity())) {
         throw new IllegalStateException();
       }
@@ -127,6 +130,18 @@ public class IssuesChecker implements IssueFilter {
       differences++;
       return true;
     }
+  }
+
+  @Nullable
+  private static IssueLocation location(FilterableIssue issue) {
+    TextRange range = issue.textRange();
+    return range == null ? null : IssueLocation.fromRange(range);
+  }
+
+  private static boolean removeExpected(Multiset<IssueKey> expectedIssues, IssueKey actual) {
+    return expectedIssues.remove(actual)
+      || expectedIssues.remove(new IssueKey(actual.componentKey, actual.ruleKey, actual.line, actual.message))
+      || expectedIssues.remove(new IssueKey(actual.componentKey, actual.ruleKey, actual.line));
   }
 
   void inactiveRule(String ruleKey) {

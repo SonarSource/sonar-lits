@@ -90,8 +90,7 @@ public class DumpPhase implements ProjectSensor {
           .on(resource)
           .message(issueKey.message == null ? "Missing" : ("Missing: " + issueKey.message));
         if (issueKey.line != 0) {
-          TextRange textRange = ((InputFile) resource).selectLine(issueKey.line);
-          location.at(textRange);
+          location.at(expectedRange((InputFile) resource, issueKey));
         }
         newIssue
           .forRule(ruleKey)
@@ -102,6 +101,11 @@ public class DumpPhase implements ProjectSensor {
       checker.disabled = false;
       componentIssues.clear();
     }
+  }
+
+  private static TextRange expectedRange(InputFile file, IssueKey issueKey) {
+    // The expected source may no longer match the current file. A line range is always safe to display.
+    return file.selectLine(issueKey.line);
   }
 
   void save() {

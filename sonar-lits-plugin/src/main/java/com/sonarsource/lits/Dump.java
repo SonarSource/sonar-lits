@@ -17,6 +17,7 @@
 package com.sonarsource.lits;
 
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.sonarsource.lits.IssueKey.IssueLocation;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,6 +64,7 @@ class Dump {
 
   private static final String SARIF_EXT = "sarif";
   private static final String LEGACY_EXT = "json";
+  private static final String NULL_MESSAGE = "null";
   private static final ObjectMapper SARIF_MAPPER = new ObjectMapper()
     .registerModule(new Jdk8Module())
     .registerModule(new SimpleModule().addSerializer(Optional.class, new EmptyCollectionOptionalSerializer()));
@@ -145,7 +147,8 @@ class Dump {
 
   private static Stream<IssueKey> toIssueKeys(Result sarifResult, String fallbackRuleKey) {
     String ruleKey = sarifResult.getRuleId().orElse(fallbackRuleKey);
-    String issueMessage = sarifResult.getMessage() == null ? null : sarifResult.getMessage().getText().orElse(null);
+    String issueMessage = sarifResult.getMessage() == null ? null : sarifResult.getMessage().getText()
+      .filter(message -> !NULL_MESSAGE.equals(message)).orElse(null);
     return sarifResult.getLocations().orElse(Collections.emptyList()).stream()
       .map(location -> toIssueKey(location, ruleKey, issueMessage))
       .filter(Objects::nonNull);
@@ -157,7 +160,8 @@ class Dump {
       .flatMap(physical -> physical.getArtifactLocation()
         .flatMap(ArtifactLocation::getUri)
         .map(componentKey -> new IssueKey(componentKey, ruleKey,
-          physical.getRegion().flatMap(Region::getStartLine).orElse(null), issueMessage)))
+          physical.getRegion().flatMap(Region::getStartLine).orElse(null), issueMessage,
+          IssueLocation.fromRegion(physical.getRegion().orElse(null)))))
       .orElse(null);
   }
 
@@ -187,6 +191,7 @@ class Dump {
       .with$schema(URI.create("https://json.schemastore.org/sarif-2.1.0.json"))
       .withVersion(Version._2_1_0)
       .withRuns(Collections.singletonList(new Run()
+        .withColumnKind(Run.ColumnKind.fromValue("utf16CodeUnits"))
         .withTool(new Tool().withDriver(new ToolComponent().withName("LITS")))
         .withResults(issues.stream().map(Dump::issueToResult).collect(Collectors.toList()))));
 
@@ -203,15 +208,13 @@ class Dump {
     PhysicalLocation physicalLocation = new PhysicalLocation()
       .withArtifactLocation(new ArtifactLocation().withUri(issue.componentKey));
     if (issue.line != 0) {
-      physicalLocation.withRegion(new Region()
-        .withStartLine(issue.line)
-        .withEndLine(issue.line)
-        .withCharOffset(null)
-        .withByteOffset(null));
+      physicalLocation.withRegion(issue.location == null
+        ? new Region().withStartLine(issue.line).withEndLine(issue.line).withCharOffset(null).withByteOffset(null)
+        : issue.location.toRegion());
     }
     return new Result()
       .withRuleId(issue.ruleKey)
-      .withMessage(new Message().withText(issue.message == null ? "Issue" : issue.message))
+      .withMessage(new Message().withText(issue.message == null ? NULL_MESSAGE : issue.message))
       .withLocations(Collections.singletonList(new Location().withPhysicalLocation(physicalLocation)));
   }
 
@@ -255,7 +258,7 @@ class Dump {
       if (c == 0) {
         c = left.componentKey.compareTo(right.componentKey);
         if (c == 0) {
-          c = left.line - right.line;
+          c = left.compareTo(right);
           if (c == 0) {
             c = Comparator.nullsFirst(String::compareTo).compare(left.message, right.message);
           }
