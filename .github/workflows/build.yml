@@ -46,7 +46,7 @@ jobs:
           overwrite: true
 
   analysis:
-    name: NEXT analysis
+    name: SQC analysis
     needs: build
     runs-on: github-ubuntu-latest-s
     permissions:
@@ -66,7 +66,8 @@ jobs:
         with:
           deploy: false
           skip-build: true
-          sonar-platform: next
+          sonar-platform: sqc-eu
+          maven-args: -Dsonar.organization=sonarsource
           artifactory-reader-role: private-reader
 
   plugin_qa:
