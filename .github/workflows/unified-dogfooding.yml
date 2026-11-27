@@ -1,8 +1,5 @@
 name: Unified Dogfooding scans
 
-# Onboard the project key below on Cloud EU and Cloud US through SPEED, and
-# grant access to the IRIS Vault secret and Artifactory private-reader preset.
-
 on:
   schedule:
     - cron: '0 4 * * 1-5' # Run the workflow Mon-Fri at 04:00 UTC
