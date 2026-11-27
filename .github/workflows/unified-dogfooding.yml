@@ -1,28 +1,23 @@
 name: Unified Dogfooding scans
 
-# Onboard the project key below on Cloud EU and Cloud US through SPEED, and
-# grant access to the IRIS Vault secret and Artifactory private-reader preset.
-
 on:
   schedule:
-    - cron: '0 4 * * *' # Run every day at 04:00 UTC
+    - cron: '0 4 * * 1-5' # Run the workflow Mon-Fri at 04:00 UTC
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  unified-platform-dogfooding:
+  build:
     runs-on: github-ubuntu-latest-s
-    name: Unified Platform Dogfooding
+    name: Build and run shadow scans
     permissions:
       id-token: write
       contents: write # Required by build-maven's build-number management
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
       - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
           version: 2026.7.7
@@ -32,8 +27,21 @@ jobs:
           run-shadow-scans: true
           artifactory-reader-role: private-reader
           maven-args: -Pcoverage -Dsonar.organization=sonarsource
+
+  run_iris:
+    needs: [ build ]
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    runs-on: sonar-xs
+    name: Run IRIS
+    concurrency:
+      group: iris
+      cancel-in-progress: false
+      queue: single
+    permissions:
+      id-token: write
+      contents: read
+    steps:
       - name: Run IRIS Analysis
-        if: github.ref_name == github.event.repository.default_branch
         uses: SonarSource/unified-dogfooding-actions/run-iris@v1
         with:
           primary_project_key: org.sonarsource.sonar-lits-plugin:lits
