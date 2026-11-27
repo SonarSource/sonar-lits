@@ -37,8 +37,8 @@ jobs:
         uses: SonarSource/unified-dogfooding-actions/run-iris@v1
         with:
           primary_project_key: org.sonarsource.sonar-lits-plugin:lits
-          primary_platform: Next
+          primary_platform: SQC-EU
           shadow1_project_key: org.sonarsource.sonar-lits-plugin:lits
-          shadow1_platform: SQC-EU
+          shadow1_platform: Next
           shadow2_project_key: org.sonarsource.sonar-lits-plugin:lits
           shadow2_platform: SQC-US
